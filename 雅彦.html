@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>愛媛県大洲市 天気予報</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: #fff;
+            color: #000;
+            -webkit-print-color-adjust: exact; /* Chrome, Safari */
+            color-adjust: exact; /* Firefox */
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 1em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        th {
+            background-color: #eee;
+        }
+        .notes {
+            text-align: right;
+            font-size: 0.8em;
+            margin-top: 0.5em;
+        }
+        /* iPhone SE (1st gen) width */
+        @media (max-width: 320px) {
+            body {
+                font-size: 14px;
+            }
+            .container {
+                padding: 10px;
+            }
+            th, td {
+                padding: 6px 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>愛媛県大洲市 天気予報</h1>
+        <table id="forecast-table">
+            <thead>
+                <tr>
+                    <th>時刻</th>
+                    <th>天気</th>
+                    <th>気温</th>
+                    <th>風速</th>
+                    <th>特記</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- JavaScript will generate rows here -->
+            </tbody>
+        </table>
+        <div class="notes">※風速の単位はm/s</div>
+    </div>
+
+    <script>
+        // --- データ更新エリア ---
+        // tenki.jpなどから取得したデータをここに貼り付けてください。
+        // 降水量のデータがない場合は `precip: 0` のままで構いません。
+        const forecastData = [
+            // 07日(木)のデータ
+            { time: 8, weather: '小雨', temp: 28, precip: 0, wind: 2 },
+            { time: 9, weather: '小雨', temp: 28, precip: 0, wind: 2 },
+            { time: 10, weather: '雨', temp: 28, precip: 3, wind: 2 },
+            { time: 11, weather: '雨', temp: 28, precip: 5, wind: 2 },
+            { time: 12, weather: '弱雨', temp: 28, precip: 1, wind: 3 },
+            { time: 13, weather: '小雨', temp: 28, precip: 0, wind: 3 },
+            { time: 14, weather: '曇り', temp: 30, precip: 0, wind: 5 },
+            { time: 15, weather: '曇り', temp: 31, precip: 0, wind: 3 },
+            { time: 16, weather: '曇り', temp: 30, precip: 0, wind: 3 },
+            { time: 17, weather: '曇り', temp: 29, precip: 0, wind: 2 },
+            { time: 18, weather: '小雨', temp: 29, precip: 0, wind: 2 },
+            { time: 19, weather: '小雨', temp: 28, precip: 0, wind: 1 },
+            { time: 20, weather: '小雨', temp: 27, precip: 0, wind: 1 },
+            { time: 21, weather: '晴れ', temp: 27, precip: 0, wind: 1 },
+            { time: 22, weather: '晴れ', temp: 26, precip: 0, wind: 1 },
+            { time: 23, weather: '晴れ', temp: 26, precip: 0, wind: 1 },
+            // 08日(金)のデータ
+            { time: 0, weather: '晴れ', temp: 26, precip: 0, wind: 1 }, // 24時は0時として扱う
+            { time: 1, weather: '晴れ', temp: 25, precip: 0, wind: 1 },
+            { time: 2, weather: '晴れ', temp: 25, precip: 0, wind: 1 },
+            { time: 3, weather: '晴れ', temp: 25, precip: 0, wind: 1 },
+            { time: 4, weather: '晴れ', temp: 25, precip: 0, wind: 1 },
+            { time: 5, weather: '晴れ', temp: 25, precip: 0, wind: 1 },
+            { time: 6, weather: '晴れ', temp: 25, precip: 0, wind: 1 },
+            { time: 7, weather: '晴れ', temp: 25, precip: 0, wind: 1 },
+        ];
+        // --- データ更新エリアここまで ---
+
+
+        function generateTable() {
+            const tableBody = document.querySelector('#forecast-table tbody');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            if (forecastData.length === 0) return;
+
+            // 最高・最低気温を特定
+            const allTemps = forecastData.map(d => d.temp);
+            const maxTemp = Math.max(...allTemps);
+            const minTemp = Math.min(...allTemps);
+
+            let lastPrintedData = null;
+            let lastPrintedTime = -100; // 十分に小さい値で初期化
+
+            for (let i = 0; i < forecastData.length; i++) {
+                const currentData = forecastData[i];
+                let shouldPrint = false;
+                
+                // 特記を計算
+                const remarks = [];
+                if (currentData.wind >= 6) remarks.push('暴風');
+                else if (currentData.wind >= 4) remarks.push('強風');
+                if (currentData.temp === maxTemp) remarks.push('●');
+                if (currentData.temp === minTemp) remarks.push('⭐︎');
+                if (currentData.precip > 10) remarks.push(`☔️+${currentData.precip}`);
+
+                // 最初のデータ(8時)と最後のデータ(翌7時)は必ず表示
+                if (currentData.time === 8 || (i === forecastData.length - 1 && forecastData[forecastData.length - 1].time === 7) ) {
+                    shouldPrint = true;
+                } else if (lastPrintedData) {
+                    // 標準ルール
+                    const isWeatherSame = currentData.weather === lastPrintedData.weather;
+                    const isTempDiffSmall = Math.abs(currentData.temp - lastPrintedData.temp) < 3;
+                    const isTimeDiffSmall = (currentData.time - lastPrintedTime) < 3;
+                    const isWindLow = currentData.wind <= 2;
+                    const isNotMaxTemp = currentData.temp !== maxTemp;
+                    const isNotMinTemp = currentData.temp !== minTemp;
+                    
+                    // 標準ルールをすべて満たす場合は省略
+                    const standardRuleMet = isWeatherSame && isTempDiffSmall && isTimeDiffSmall && isWindLow && isNotMaxTemp && isNotMinTemp;
+
+                    if (!standardRuleMet) {
+                        shouldPrint = true;
+                    }
+                    // 特記がある場合は必ず表示
+                    if (remarks.length > 0) {
+                        shouldPrint = true;
+                    }
+                } else {
+                    // lastPrintedDataがない場合 (最初のループ)
+                    shouldPrint = true;
+                }
+
+
+                if (shouldPrint) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${currentData.time === 0 ? 24 : currentData.time}</td>
+                        <td>${currentData.weather}</td>
+                        <td>${currentData.temp}</td>
+                        <td>${currentData.wind}</td>
+                        <td>${remarks.join(' ')}</td>
+                    `;
+                    tableBody.appendChild(row);
+                    lastPrintedData = currentData;
+                    lastPrintedTime = currentData.time;
+                }
+            }
+        }
+
+        // 初期表示
+        generateTable();
+    </script>
+</body>
+</html>
