@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* 海をイメージした紺・青の配色 */
+  --color-ocean-50: #eff6ff;
+  --color-ocean-100: #dbeafe;
+  --color-ocean-200: #bfdbfe;
+  --color-ocean-300: #93c5fd;
+  --color-ocean-400: #60a5fa;
+  --color-ocean-500: #3b82f6;
+  --color-ocean-600: #2563eb;
+  --color-ocean-700: #1d4ed8;
+  --color-ocean-800: #1e3a8a;
+  --color-ocean-900: #172554;
+  --color-navy: #0b1f3f;
+  --color-navy-light: #14335f;
+}
+
+html {
+  /* 屋外でも見やすいよう文字を大きめに */
+  font-size: 17px;
+}
+
+body {
+  font-family:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo,
+    system-ui, sans-serif;
+  @apply bg-slate-100 text-slate-900 dark:bg-navy dark:text-slate-100;
+}
+
+/* Leaflet ポップアップのダークモード調整 */
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip {
+  background: #14335f;
+  color: #f1f5f9;
+}
