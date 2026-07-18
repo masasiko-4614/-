@@ -3,7 +3,7 @@
 // OpenStreetMap + Leaflet の地図表示。
 // タイルURLは NEXT_PUBLIC_MAP_TILE_URL で差し替え可能。
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FishingSpot } from "@/lib/types";
@@ -41,6 +41,7 @@ export default function MapView({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -48,6 +49,16 @@ export default function MapView({
       center: [33.42, 132.47],
       zoom: 10,
       zoomControl: true,
+      // 操作感度を上げる設定
+      zoomSnap: 0.25, // ズームの刻みを細かく
+      zoomDelta: 0.5,
+      wheelPxPerZoomLevel: 30, // ホイール/トラックパッドのズームを速く
+      wheelDebounceTime: 20,
+      inertia: true,
+      inertiaDeceleration: 1500, // 指を離した後もよく滑る
+      inertiaMaxSpeed: 3000,
+      touchZoom: true,
+      bounceAtZoomLimits: false,
     });
     L.tileLayer(TILE_URL, {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -89,10 +100,36 @@ export default function MapView({
     if (!map || !selectedId) return;
     const marker = markersRef.current.get(selectedId);
     if (marker) {
-      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 13));
+      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 13), {
+        animate: true,
+        duration: 0.6,
+      });
       marker.openPopup();
     }
   }, [selectedId]);
 
-  return <div ref={containerRef} className="h-[45vh] w-full" />;
+  // 拡大切替後に地図のサイズを再計算する
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const t = setTimeout(() => map.invalidateSize(), 220);
+    return () => clearTimeout(t);
+  }, [expanded]);
+
+  return (
+    <div
+      className={`relative w-full transition-[height] duration-200 ${
+        expanded ? "h-[78vh]" : "h-[45vh]"
+      }`}
+    >
+      <div ref={containerRef} className="h-full w-full" />
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        aria-label={expanded ? "地図を縮小" : "地図を拡大"}
+        className="absolute right-3 top-3 z-[800] rounded-xl bg-white px-3 py-2 text-lg font-bold text-slate-700 shadow-lg dark:bg-navy-light dark:text-slate-100"
+      >
+        {expanded ? "🗗 縮小" : "⛶ 拡大"}
+      </button>
+    </div>
+  );
 }
