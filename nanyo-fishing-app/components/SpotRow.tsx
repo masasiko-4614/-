@@ -3,6 +3,14 @@ import { ExpectationChip } from "./ExpectationBadge";
 import Stars from "./Stars";
 import type { SpotForecast } from "@/lib/types";
 
+/** 上位3件はメダル風にして、順位が一目で分かるようにする */
+function rankStyle(rank: number): string {
+  if (rank === 1) return "bg-gradient-to-br from-amber-400 to-amber-600 text-white";
+  if (rank === 2) return "bg-gradient-to-br from-slate-300 to-slate-500 text-white";
+  if (rank === 3) return "bg-gradient-to-br from-orange-400 to-orange-700 text-white";
+  return "bg-ocean-800 text-white";
+}
+
 /** おすすめ釣り場の1行。順位つきで一覧に並べる */
 export default function SpotRow({
   forecast,
@@ -18,11 +26,15 @@ export default function SpotRow({
   return (
     <Link
       href={`/spot/${f.spotId}`}
-      className="block rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-ocean-400 dark:border-slate-700 dark:bg-navy-light"
+      className="block rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-colors hover:border-ocean-400 dark:border-slate-700 dark:bg-navy-light"
     >
       <div className="flex items-start gap-2">
         {rank !== undefined && (
-          <span className="mt-0.5 shrink-0 rounded-lg bg-ocean-800 px-2 py-0.5 text-sm font-black text-white">
+          <span
+            className={`mt-0.5 shrink-0 rounded-lg px-2 py-0.5 text-sm font-black shadow-sm ${rankStyle(
+              rank
+            )}`}
+          >
             {rank}位
           </span>
         )}
