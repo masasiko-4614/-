@@ -1,221 +1,317 @@
 "use client";
 
-// ホーム:今日のおすすめ釣り場・風・潮・おすすめ時間帯を大きく表示する
-
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import DataBadge from "@/components/DataBadge";
+import { ExpectationBig } from "@/components/ExpectationBadge";
+import FishSelect from "@/components/FishSelect";
 import Header from "@/components/Header";
-import Stars from "@/components/Stars";
+import HourlyChart from "@/components/HourlyChart";
+import SpotRow from "@/components/SpotRow";
 import WarningBanner from "@/components/WarningBanner";
-import SampleBadge from "@/components/SampleBadge";
-import { calcSunTimes, formatHM } from "@/lib/astro";
-import { calcTideInfo } from "@/lib/tide";
-import { getWeather, sampleWeather } from "@/lib/weather";
-import { calcSpotScore } from "@/lib/score";
-import { getAllSpots, getFavorites, getRecords } from "@/lib/storage";
-import { useHydrated } from "@/lib/useHydrated";
-import { todayStr, formatDateJa, toDateStr } from "@/lib/date";
-import type { CatchRecord, DailyWeather, FishingSpot, SpotScore } from "@/lib/types";
+import { AREA_INFOS } from "@/lib/areas";
+import { calcSunMoon } from "@/lib/astro";
+import { formatDateJa } from "@/lib/date";
+import { buildForecast, shioDescription } from "@/lib/forecast";
+import { SAFETY_DISCLAIMER } from "@/lib/safety";
+import { getSettings, type AppSettings } from "@/lib/storage";
+import { useNow, useLocalData } from "@/lib/useClient";
+import { useDayForecasts } from "@/lib/useForecast";
+import { degToDirName, weatherEmoji } from "@/lib/weather";
+import type { Area, FishKey } from "@/lib/types";
 
-interface Ranked {
-  spot: FishingSpot;
-  score: SpotScore;
-  weather: DailyWeather;
-}
+const DEFAULT_SETTINGS: AppSettings = {
+  homeArea: "八幡浜",
+  travelSpeedKmh: 38,
+  useGps: false,
+};
 
 export default function HomePage() {
-  const hydrated = useHydrated();
-  const [dateStr, setDateStr] = useState(todayStr());
-  const [ranked, setRanked] = useState<Ranked[]>([]);
+  const now = useNow();
+  const [fish, setFish] = useState<FishKey | null>(null);
+  const settings = useLocalData(getSettings, DEFAULT_SETTINGS);
+  const [areaOverride, setAreaOverride] = useState<Area | null>(null);
+  const area = areaOverride ?? settings.homeArea;
 
-  const spots = useMemo<FishingSpot[]>(() => (hydrated ? getAllSpots() : []), [hydrated]);
-  const favorites = useMemo<string[]>(() => (hydrated ? getFavorites() : []), [hydrated]);
-  const records = useMemo<CatchRecord[]>(() => (hydrated ? getRecords() : []), [hydrated]);
+  const dateStr = now.dateStr;
+  const { loading, weathers, forecasts, spots, personal, tides, error } = useDayForecasts(
+    dateStr,
+    fish,
+    now.hour
+  );
 
-  const date = useMemo(() => {
+  const areaInfo = AREA_INFOS.find((a) => a.name === area) ?? AREA_INFOS[0];
+  const weather = weathers[area];
+
+  // 拠点エリアの代表釣り場(そのエリアで今いちばん期待できる場所)
+  const areaBest = useMemo(
+    () => forecasts.find((f) => f.area === area) ?? forecasts[0],
+    [forecasts, area]
+  );
+
+  // 代表釣り場の詳しい予測(おすすめ魚種つき)
+  const detail = useMemo(() => {
+    if (!areaBest || !dateStr) return null;
+    const spot = spots.find((s) => s.id === areaBest.spotId);
+    const w = weathers[spot?.area ?? area];
+    if (!spot || !w) return null;
     const [y, m, d] = dateStr.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }, [dateStr]);
+    return buildForecast({
+      spot,
+      date: new Date(y, m - 1, d),
+      weather: w,
+      fish,
+      personal,
+      nowHour: now.hour,
+      includeTopFish: true,
+      tide: tides[spot.tideStation],
+    });
+  }, [areaBest, spots, weathers, area, dateStr, fish, personal, now.hour, tides]);
 
-  useEffect(() => {
-    if (spots.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      const results: Ranked[] = [];
-      for (const spot of spots) {
-        // サンプル天気は釣り場ごとにシードを変え、スコアに差が出るようにする
-        const weather = await getWeather(dateStr, spot.lat, spot.lng, spot.id);
-        results.push({ spot, weather, score: calcSpotScore(spot, date, weather, records) });
-      }
-      // お気に入りを優先しつつスコア順に並べる
-      results.sort((a, b) => {
-        const favA = favorites.includes(a.spot.id) ? 1 : 0;
-        const favB = favorites.includes(b.spot.id) ? 1 : 0;
-        if (favA !== favB) return favB - favA;
-        return b.score.total - a.score.total;
-      });
-      if (!cancelled) setRanked(results);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [spots, favorites, records, dateStr, date]);
-
-  const best = ranked[0];
-  const tide = useMemo(() => calcTideInfo(date), [date]);
   const sun = useMemo(() => {
-    const lat = best?.spot.lat ?? 33.46;
-    const lng = best?.spot.lng ?? 132.42;
-    return calcSunTimes(date, lat, lng);
-  }, [date, best]);
-  const weather = best?.weather ?? sampleWeather(dateStr, "八幡浜");
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return calcSunMoon(new Date(y, m - 1, d), areaInfo.lat, areaInfo.lng);
+  }, [dateStr, areaInfo]);
 
-  const shiftDate = (days: number) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    setDateStr(toDateStr(d));
-  };
+  const tide = tides[areaInfo.tideStation];
+  const nowHourly = weather?.hourly[Math.floor(now.hour ?? 12)];
+  const top5 = forecasts.slice(0, 5);
 
   return (
-    <main>
+    <>
       <Header title="南予釣行ナビ" />
-      <div className="space-y-4 p-4">
-        {/* 日付切り替え */}
-        <div className="flex items-center justify-between rounded-xl bg-white p-2 shadow dark:bg-navy-light">
-          <button
-            onClick={() => shiftDate(-1)}
-            className="rounded-lg bg-ocean-100 px-4 py-2 text-lg font-bold text-ocean-800 dark:bg-ocean-900 dark:text-ocean-200"
-          >
-            ◀ 前日
-          </button>
-          <div className="text-center">
-            <p className="text-lg font-bold">{formatDateJa(dateStr)}</p>
-            {dateStr === todayStr() && (
-              <p className="text-sm text-ocean-600 dark:text-ocean-300">今日</p>
-            )}
-          </div>
-          <button
-            onClick={() => shiftDate(1)}
-            className="rounded-lg bg-ocean-100 px-4 py-2 text-lg font-bold text-ocean-800 dark:bg-ocean-900 dark:text-ocean-200"
-          >
-            翌日 ▶
-          </button>
-        </div>
-
-        {best && <WarningBanner warnings={best.score.warnings} />}
-
-        {/* 今日のおすすめ */}
-        <section className="rounded-2xl bg-gradient-to-br from-ocean-800 to-ocean-600 p-5 text-white shadow-lg">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-sky-200">
-              {dateStr === todayStr() ? "今日" : "この日"}のおすすめ
-            </h2>
-            <SampleBadge show={weather.isSample} />
-          </div>
-          {best ? (
-            <>
-              <p className="mt-1 text-3xl font-extrabold">{best.spot.name}</p>
-              <div className="mt-2 flex items-center gap-3">
-                <Stars n={best.score.stars} size="text-3xl" />
-                <span className="text-xl font-bold">{best.score.total}点</span>
-              </div>
-              <p className="mt-2 text-sm text-sky-100">
-                釣れる魚:{best.spot.fish.slice(0, 4).join("・")}
+      <main className="space-y-4 p-3">
+        {/* ---- 日付・現在時刻 ---- */}
+        <section className="rounded-2xl bg-navy p-3 text-white dark:bg-navy-light">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <p className="text-sm font-bold text-ocean-200">今日の南予・釣り予報</p>
+              <p className="text-xl font-black">
+                {now.dateStr ? formatDateJa(now.dateStr) : "—"}
               </p>
-              <p className="mt-1 text-xs text-sky-200">
-                ※おすすめ度は判断材料です。釣果を保証するものではありません。
-              </p>
-            </>
-          ) : (
-            <p className="mt-2 text-lg">計算中…</p>
-          )}
-        </section>
+            </div>
+            <p className="text-3xl font-black tabular-nums">{now.clock}</p>
+          </div>
 
-        {/* 風・潮・時間の大きな表示 */}
-        <section className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
-            <p className="text-base font-bold text-slate-500 dark:text-slate-300">🌬️ 風</p>
-            <p className="mt-1 text-3xl font-extrabold">
-              {weather.windSpeedMs}
-              <span className="text-lg font-bold"> m/s</span>
-            </p>
-            <p className="text-lg font-bold">{weather.windDir}の風</p>
-          </div>
-          <div className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
-            <p className="text-base font-bold text-slate-500 dark:text-slate-300">🌊 潮</p>
-            <p className="mt-1 text-3xl font-extrabold">{tide.shio}</p>
-            <p className="text-sm font-medium">
-              {tide.events
-                .map((e) => `${e.type === "満潮" ? "満" : "干"}${e.time}`)
-                .join(" / ")}
-            </p>
-          </div>
-          <div className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
-            <p className="text-base font-bold text-slate-500 dark:text-slate-300">☀️ 天気</p>
-            <p className="mt-1 text-2xl font-extrabold">{weather.label}</p>
-            <p className="text-lg font-bold">
-              {weather.tempMinC}〜{weather.tempMaxC}℃ / 降水{weather.precipProb}%
-            </p>
-          </div>
-          <div className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
-            <p className="text-base font-bold text-slate-500 dark:text-slate-300">🌅 日の出入</p>
-            <p className="mt-1 text-xl font-extrabold">出 {formatHM(sun.sunrise)}</p>
-            <p className="text-xl font-extrabold">入 {formatHM(sun.sunset)}</p>
-          </div>
-        </section>
-
-        {/* おすすめ時間帯 */}
-        {best && best.score.windows.length > 0 && (
-          <section className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
-            <h2 className="text-lg font-bold">⏰ おすすめの時間帯</h2>
-            <ul className="mt-2 space-y-2">
-              {best.score.windows.map((w) => (
-                <li
-                  key={w.start}
-                  className="rounded-xl bg-ocean-50 p-3 dark:bg-ocean-900"
-                >
-                  <p className="text-2xl font-extrabold text-ocean-800 dark:text-ocean-200">
-                    {w.start} 〜 {w.end}
-                  </p>
-                  <p className="text-base font-medium">{w.reasons.join("・")}</p>
-                </li>
+          {/* エリア切り替え */}
+          <div className="mt-2 flex items-center gap-2">
+            <label htmlFor="area" className="text-sm font-bold text-ocean-200">
+              基準エリア
+            </label>
+            <select
+              id="area"
+              value={area}
+              onChange={(e) => setAreaOverride(e.target.value as Area)}
+              className="flex-1 rounded-lg bg-navy-light px-2 py-1.5 text-base font-bold text-white dark:bg-navy"
+            >
+              {AREA_INFOS.map((a) => (
+                <option key={a.name} value={a.name}>
+                  {a.name}
+                </option>
               ))}
-            </ul>
+            </select>
+          </div>
+        </section>
+
+        {loading && !weather && (
+          <p className="rounded-xl bg-white p-4 text-center text-slate-500 dark:bg-navy-light">
+            気象データを取得中…
+          </p>
+        )}
+        {error && (
+          <p className="rounded-xl border border-amber-400 bg-amber-50 p-3 text-sm font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            {error}
+          </p>
+        )}
+
+        {/* ---- 安全警告(最優先) ---- */}
+        {detail && <WarningBanner warnings={detail.warnings} />}
+
+        {/* ---- 現在の釣れやすさ + BEST TIME ---- */}
+        {detail && (
+          <section className="space-y-2">
+            <ExpectationBig
+              score={detail.nowScore}
+              label={`現在の釣れやすさ(${detail.spotName})`}
+            />
+            {detail.best ? (
+              <div className="rounded-2xl border-2 border-rose-400 bg-rose-50 p-3 dark:bg-rose-950/40">
+                <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
+                  本日のBEST TIME
+                </p>
+                <p className="text-3xl font-black tabular-nums">
+                  {detail.best.start}〜{detail.best.end}
+                </p>
+                <p className="text-lg font-bold">期待度 {detail.best.score}点</p>
+                <p className="mt-1 text-sm">{detail.best.reasons.join("・")}</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-navy-light">
+                <p className="font-bold">本日は目立った時合いが見込めません</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  気象・海象条件が厳しいか、安全上おすすめできない時間帯が続いています。
+                </p>
+              </div>
+            )}
           </section>
         )}
 
-        {/* 他の釣り場ランキング */}
-        <section className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
-          <h2 className="text-lg font-bold">📍 釣り場ランキング</h2>
-          <ul className="mt-2 divide-y divide-slate-200 dark:divide-ocean-800">
-            {ranked.slice(0, 6).map(({ spot, score }) => (
-              <li key={spot.id} className="flex items-center justify-between py-2.5">
-                <div>
-                  <p className="text-base font-bold">
-                    {favorites.includes(spot.id) && "⭐ "}
-                    {spot.name}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{spot.area}</p>
-                </div>
-                <div className="text-right">
-                  <Stars n={score.stars} size="text-lg" />
-                  <p className="text-sm font-bold">{score.total}点</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/map"
-            className="mt-3 block rounded-xl bg-ocean-600 py-3 text-center text-lg font-bold text-white"
-          >
-            マップで見る
-          </Link>
+        {/* ---- 気象・海象 ---- */}
+        {weather && sun && tide && (
+          <section className="rounded-2xl bg-white p-3 dark:bg-navy-light">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-lg font-bold">{area}の気象・海象</h2>
+              <DataBadge quality={weather.quality} title={weather.source} />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Cell
+                label="天気"
+                value={`${weatherEmoji(nowHourly?.weatherCode ?? 0)} ${nowHourly?.label ?? weather.label}`}
+              />
+              <Cell label="気温" value={`${nowHourly?.tempC ?? weather.tempMaxC}℃`} sub={`${weather.tempMinC}/${weather.tempMaxC}℃`} />
+              <Cell label="降水確率" value={`${nowHourly?.precipProb ?? weather.precipProb}%`} />
+              <Cell
+                label="風"
+                value={`${degToDirName(nowHourly?.windDirDeg ?? weather.windDirDeg)} ${nowHourly?.windSpeedMs ?? weather.windSpeedMaxMs}m/s`}
+                sub={`最大 ${weather.windSpeedMaxMs}m/s`}
+              />
+              <Cell
+                label="波"
+                value={
+                  nowHourly?.waveHeightM !== null && nowHourly?.waveHeightM !== undefined
+                    ? `${nowHourly.waveHeightM.toFixed(1)}m`
+                    : "未取得"
+                }
+                sub={weather.waveMaxM !== null ? `最大 ${weather.waveMaxM.toFixed(1)}m` : undefined}
+              />
+              <Cell label="潮" value={tide.shio} sub={`月齢 ${tide.moonAge.toFixed(1)}`} />
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <InfoRow
+                label="満潮"
+                value={tide.events.filter((e) => e.type === "満潮").map((e) => e.time).join(" / ") || "—"}
+              />
+              <InfoRow
+                label="干潮"
+                value={tide.events.filter((e) => e.type === "干潮").map((e) => e.time).join(" / ") || "—"}
+              />
+              <InfoRow label="日の出" value={sun.sunrise} />
+              <InfoRow label="日の入り" value={sun.sunset} />
+              <InfoRow label="朝まづめ" value={`${sun.dawnStart}〜${sun.dawnEnd}`} />
+              <InfoRow label="夕まづめ" value={`${sun.duskStart}〜${sun.duskEnd}`} />
+            </div>
+
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              潮汐は簡易計算による<b>参考値</b>です（{tide.stationName}基準）。
+              {dateStr && ` ${shioDescription(new Date(dateStr), areaInfo.tideStation)}`}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span>出所: {weather.source}</span>
+              <DataBadge quality={weather.waveQuality} title="波高データの出所" />
+            </div>
+          </section>
+        )}
+
+        {/* ---- 24時間グラフ ---- */}
+        {detail && tide && sun && (
+          <section className="rounded-2xl bg-white p-3 dark:bg-navy-light">
+            <h2 className="mb-1 text-lg font-bold">24時間の釣れやすさ</h2>
+            <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
+              {detail.spotName} / {fish ?? "魚種おまかせ"}
+            </p>
+            <HourlyChart
+              hourly={detail.hourly}
+              events={tide.events}
+              sun={sun}
+              nowHour={now.hour}
+              best={detail.best}
+            />
+          </section>
+        )}
+
+        {/* ---- 魚種切り替え ---- */}
+        <section className="rounded-2xl bg-white p-3 dark:bg-navy-light">
+          <h2 className="mb-2 text-lg font-bold">狙う魚を選ぶ</h2>
+          <FishSelect value={fish} onChange={setFish} />
+          {detail && detail.topFish.length > 0 && (
+            <p className="mt-2 text-sm">
+              <span className="font-bold">今日のおすすめ魚種：</span>
+              {detail.topFish.slice(0, 4).map((t) => `${t.fish}(${t.score})`).join(" / ")}
+            </p>
+          )}
         </section>
 
-        <p className="px-2 text-sm text-slate-500 dark:text-slate-400">
-          天気・潮汐はAPIキー未設定のためサンプル値です(潮回り・日の出入は計算値)。実際の釣行前は気象庁の警報・注意報と潮汐表を必ず確認してください。
+        {/* ---- おすすめ釣り場 TOP5 ---- */}
+        <section className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-bold">
+              今日のおすすめ釣り場 TOP5
+              {fish && <span className="ml-1 text-sm font-normal">（{fish}）</span>}
+            </h2>
+            <Link href="/ranking" className="text-sm font-bold text-ocean-600 dark:text-ocean-300">
+              ランキングを見る ›
+            </Link>
+          </div>
+          {top5.length === 0 && !loading && (
+            <p className="rounded-xl bg-white p-4 text-center text-slate-500 dark:bg-navy-light">
+              条件に合う釣り場が見つかりませんでした。
+            </p>
+          )}
+          {top5.map((f, i) => (
+            <SpotRow key={f.spotId} forecast={f} rank={i + 1} showFish={false} />
+          ))}
+        </section>
+
+        {/* ---- クイックリンク ---- */}
+        <section className="grid grid-cols-2 gap-2">
+          <QuickLink href="/now" icon="🚗" label="今から行くなら" />
+          <QuickLink href="/forecast" icon="📈" label="時合い予報を見る" />
+          <QuickLink href="/tide" icon="🌊" label="潮汐を見る" />
+          <QuickLink href="/map" icon="🗺️" label="釣り場マップ" />
+          <QuickLink href="/favorites" icon="⭐" label="お気に入り" />
+          <QuickLink href="/record" icon="🎣" label="釣果を登録" />
+        </section>
+
+        <p className="pb-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          {SAFETY_DISCLAIMER}
         </p>
-      </div>
-    </main>
+      </main>
+    </>
+  );
+}
+
+function Cell({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-xl bg-slate-100 p-2 dark:bg-navy">
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-base font-bold leading-tight">{value}</p>
+      {sub && <p className="text-xs text-slate-500 dark:text-slate-400">{sub}</p>}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-2 border-b border-slate-200 pb-1 dark:border-slate-700">
+      <span className="w-16 shrink-0 text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="font-bold tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function QuickLink({ href, icon, label }: { href: string; icon: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2 rounded-xl bg-white p-3 font-bold shadow-sm dark:bg-navy-light"
+    >
+      <span className="text-2xl" aria-hidden>
+        {icon}
+      </span>
+      {label}
+    </Link>
   );
 }

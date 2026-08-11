@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/", label: "ホーム", icon: "🏠" },
+  { href: "/forecast", label: "予報", icon: "📈" },
   { href: "/map", label: "マップ", icon: "🗺️" },
-  { href: "/record", label: "登録", icon: "🎣" },
-  { href: "/history", label: "履歴", icon: "📋" },
-  { href: "/analysis", label: "分析", icon: "📊" },
+  { href: "/record", label: "釣果", icon: "🎣" },
+  { href: "/menu", label: "メニュー", icon: "☰" },
 ];
 
 export default function BottomNav() {
@@ -23,7 +23,7 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-sm font-bold ${
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-bold ${
                 active ? "text-sky-300" : "text-slate-300"
               }`}
             >

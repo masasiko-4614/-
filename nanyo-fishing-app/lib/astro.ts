@@ -1,5 +1,7 @@
-// 日の出・日の入り(NOAA略式計算)と月齢の計算。
+// 日の出・日の入り(NOAA略式)、月齢、まづめ時間の計算。
 // 外部APIなしで動作する実計算(数分程度の誤差あり)。
+
+import type { SunMoonTimes } from "./types";
 
 const RAD = Math.PI / 180;
 
@@ -49,8 +51,84 @@ export function calcMoonAge(date: Date): number {
   return age < 0 ? age + SYNODIC : age;
 }
 
+/** 月齢から月の呼び名を返す */
+export function moonName(age: number): string {
+  if (age < 1.5) return "新月";
+  if (age < 6.5) return "三日月〜上弦前";
+  if (age < 8.5) return "上弦の月";
+  if (age < 13.5) return "十日夜〜満月前";
+  if (age < 16.5) return "満月";
+  if (age < 21.5) return "十八夜〜下弦前";
+  if (age < 23.5) return "下弦の月";
+  if (age < 28.5) return "有明月";
+  return "新月";
+}
+
 export function formatHM(d: Date): string {
   const h = d.getHours().toString().padStart(2, "0");
   const m = d.getMinutes().toString().padStart(2, "0");
   return `${h}:${m}`;
+}
+
+export function hourToHM(h: number): string {
+  let hh = Math.floor(h);
+  let mm = Math.round((h - hh) * 60);
+  if (mm === 60) {
+    mm = 0;
+    hh += 1;
+  }
+  return `${(hh % 24).toString().padStart(2, "0")}:${mm.toString().padStart(2, "0")}`;
+}
+
+export function dateToHour(d: Date): number {
+  return d.getHours() + d.getMinutes() / 60;
+}
+
+/**
+ * 日の出・日の入り・まづめ時間をまとめて返す。
+ * 朝まづめ = 日の出の1時間前〜1時間後、夕まづめ = 日の入りの1時間前〜1時間後 とする。
+ */
+export function calcSunMoon(date: Date, lat: number, lng: number): SunMoonTimes {
+  const { sunrise, sunset } = calcSunTimes(date, lat, lng);
+  const sunriseH = dateToHour(sunrise);
+  const sunsetH = dateToHour(sunset);
+  const age = calcMoonAge(date);
+  return {
+    sunrise: formatHM(sunrise),
+    sunset: formatHM(sunset),
+    sunriseH,
+    sunsetH,
+    dawnStart: hourToHM(Math.max(0, sunriseH - 1)),
+    dawnEnd: hourToHM(Math.min(24, sunriseH + 1)),
+    duskStart: hourToHM(Math.max(0, sunsetH - 1)),
+    duskEnd: hourToHM(Math.min(24, sunsetH + 1)),
+    moonAge: age,
+    moonName: moonName(age),
+  };
+}
+
+/**
+ * 指定時刻の「まづめ度」(0〜1)。
+ * 日の出・日の入りのちょうどで1.0、±1時間で0.5、±2時間で0.15程度。
+ */
+export function mazumeFactor(hour: number, sunriseH: number, sunsetH: number): number {
+  const d = Math.min(Math.abs(hour - sunriseH), Math.abs(hour - sunsetH));
+  if (d <= 0.5) return 1;
+  if (d <= 1) return 0.8;
+  if (d <= 1.5) return 0.55;
+  if (d <= 2) return 0.3;
+  if (d <= 3) return 0.15;
+  return 0.05;
+}
+
+/** その時刻が朝まづめ / 夕まづめ / 日中 / 夜 のどれかを返す */
+export function timeBand(
+  hour: number,
+  sunriseH: number,
+  sunsetH: number
+): "朝まづめ" | "夕まづめ" | "日中" | "夜" {
+  if (Math.abs(hour - sunriseH) <= 1) return "朝まづめ";
+  if (Math.abs(hour - sunsetH) <= 1) return "夕まづめ";
+  if (hour > sunriseH && hour < sunsetH) return "日中";
+  return "夜";
 }

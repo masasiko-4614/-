@@ -14,9 +14,13 @@ import {
   YAxis,
 } from "recharts";
 import Header from "@/components/Header";
+import { MIN_RECORDS, getAnalyzer } from "@/lib/personal";
 import { getRecords } from "@/lib/storage";
+import { useLocalData } from "@/lib/useClient";
 import { useHydrated } from "@/lib/useHydrated";
 import type { CatchRecord } from "@/lib/types";
+
+const NO_RECORDS: CatchRecord[] = [];
 
 type Dim = "月別" | "魚種別" | "釣り場別" | "潮回り別" | "時間帯別" | "ルアー別";
 const DIMS: Dim[] = ["月別", "魚種別", "釣り場別", "潮回り別", "時間帯別", "ルアー別"];
@@ -78,7 +82,8 @@ export default function AnalysisPage() {
   const hydrated = useHydrated();
   const [dim, setDim] = useState<Dim>("月別");
 
-  const records = useMemo<CatchRecord[]>(() => (hydrated ? getRecords() : []), [hydrated]);
+  const records = useLocalData(getRecords, NO_RECORDS);
+  const profile = useMemo(() => getAnalyzer().analyze(records), [records]);
   const isDark = useMemo(
     () => hydrated && document.documentElement.classList.contains("dark"),
     [hydrated]
@@ -111,6 +116,27 @@ export default function AnalysisPage() {
           </div>
         ) : (
           <>
+            {/* 自分専用の傾向分析 */}
+            <section className="rounded-2xl border-2 border-ocean-400 bg-ocean-50 p-3 dark:border-ocean-700 dark:bg-navy-light">
+              <h2 className="mb-1 text-lg font-bold">🤖 あなた専用の傾向分析</h2>
+              <p className="mb-2 text-xs text-slate-600 dark:text-slate-400">
+                登録した釣果 {records.length} 件から、統計で「釣れやすい条件」を割り出しています。
+                {records.length < MIN_RECORDS &&
+                  `（${MIN_RECORDS} 件以上でくわしい分析が出ます）`}
+              </p>
+              <ul className="space-y-2">
+                {profile.insights.map((ins, i) => (
+                  <li key={i} className="rounded-xl bg-white p-2.5 dark:bg-navy">
+                    <p className="font-bold">{ins.title}</p>
+                    <p className="text-sm leading-relaxed">{ins.detail}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                この分析結果は、ホームや予報画面の期待度にも ±6点の範囲で反映されます。
+              </p>
+            </section>
+
             {/* サマリー */}
             <section className="grid grid-cols-3 gap-3">
               {[

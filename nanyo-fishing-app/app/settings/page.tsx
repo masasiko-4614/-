@@ -4,15 +4,32 @@
 
 import { useRef, useState } from "react";
 import Header from "@/components/Header";
-import { clearAll, exportAll, importAll } from "@/lib/storage";
+import { AREA_INFOS } from "@/lib/areas";
+import {
+  clearAll,
+  exportAll,
+  getSettings,
+  importAll,
+  saveSettings,
+  type AppSettings,
+} from "@/lib/storage";
+import { useLocalData } from "@/lib/useClient";
 import { useHydrated } from "@/lib/useHydrated";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import type { Area } from "@/lib/types";
+
+const DEFAULT_SETTINGS: AppSettings = {
+  homeArea: "八幡浜",
+  travelSpeedKmh: 38,
+  useGps: false,
+};
 
 export default function SettingsPage() {
   const hydrated = useHydrated();
   const [darkOverride, setDarkOverride] = useState<boolean | null>(null);
   const [message, setMessage] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const settings = useLocalData(getSettings, DEFAULT_SETTINGS);
 
   const isDark =
     darkOverride ?? (hydrated && document.documentElement.classList.contains("dark"));
@@ -56,7 +73,9 @@ export default function SettingsPage() {
     setMessage("すべてのデータを削除しました。");
   };
 
-  const weatherApi = process.env.NEXT_PUBLIC_WEATHER_API_URL;
+  // 天気は既定で Open-Meteo(APIキー不要)に接続する
+  const weatherApi =
+    process.env.NEXT_PUBLIC_WEATHER_API_URL ?? "https://api.open-meteo.com/v1/forecast";
   const tideApi = process.env.NEXT_PUBLIC_TIDE_API_URL;
 
   return (
@@ -68,6 +87,39 @@ export default function SettingsPage() {
             {message}
           </p>
         )}
+
+        <section className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
+          <h2 className="text-lg font-bold">釣行の基準</h2>
+          <label className="mt-2 block text-base font-bold">
+            拠点にする地域
+            <select
+              value={settings.homeArea}
+              onChange={(e) => saveSettings({ homeArea: e.target.value as Area })}
+              className="mt-1 w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-lg dark:border-ocean-800 dark:bg-navy dark:text-white"
+            >
+              {AREA_INFOS.map((a) => (
+                <option key={a.name} value={a.name}>
+                  {a.name}（{a.region}）
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            ホーム画面の「今日の南予・釣り予報」と、「今から行くなら」の出発地の基準になります。
+          </p>
+          <label className="mt-3 block text-base font-bold">
+            移動速度の目安：{settings.travelSpeedKmh}km/h
+            <input
+              type="range"
+              min={20}
+              max={60}
+              step={2}
+              value={settings.travelSpeedKmh}
+              onChange={(e) => saveSettings({ travelSpeedKmh: Number(e.target.value) })}
+              className="mt-1 w-full"
+            />
+          </label>
+        </section>
 
         <section className="rounded-2xl bg-white p-4 shadow dark:bg-navy-light">
           <h2 className="text-lg font-bold">表示</h2>
@@ -125,14 +177,14 @@ export default function SettingsPage() {
           <ul className="mt-2 space-y-2 text-base">
             <li className="flex items-center justify-between">
               <span>天気API</span>
-              <span className={weatherApi ? "font-bold text-emerald-600" : "text-slate-500"}>
-                {weatherApi ? "接続設定済み" : "未設定(サンプル値)"}
+              <span className="font-bold text-emerald-600">
+                Open-Meteo(APIキー不要)
               </span>
             </li>
             <li className="flex items-center justify-between">
               <span>潮汐API</span>
               <span className={tideApi ? "font-bold text-emerald-600" : "text-slate-500"}>
-                {tideApi ? "接続設定済み" : "未設定(簡易計算)"}
+                {tideApi ? "接続設定済み" : "未設定(アプリ内計算の参考値)"}
               </span>
             </li>
             <li className="flex items-center justify-between">
@@ -147,7 +199,12 @@ export default function SettingsPage() {
             </li>
           </ul>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            接続方法は README の「環境変数」を参照してください。
+            天気・風・波は Open-Meteo の公開データを使用しています（APIキー不要）。
+            エンドポイントを変える場合は環境変数 NEXT_PUBLIC_WEATHER_API_URL /
+            NEXT_PUBLIC_MARINE_API_URL を設定してください。詳しくは README の「環境変数」を参照。
+          </p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            接続先: {weatherApi}
           </p>
         </section>
 

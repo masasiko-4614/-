@@ -138,15 +138,22 @@ export default function HistoryPage() {
                             <dt className="text-sm font-bold text-slate-500 dark:text-slate-400">
                               潮回り
                             </dt>
-                            <dd>{r.tide}</dd>
+                            <dd>
+                              {r.tide}
+                              {r.tideState && ` / ${r.tideState}`}
+                            </dd>
                           </div>
                         )}
-                        {r.wind && (
+                        {(r.windDir || r.windSpeedMs !== undefined) && (
                           <div>
                             <dt className="text-sm font-bold text-slate-500 dark:text-slate-400">
                               風
                             </dt>
-                            <dd>{r.wind}</dd>
+                            <dd>
+                              {[r.windDir, r.windSpeedMs !== undefined ? `${r.windSpeedMs}m/s` : null]
+                                .filter(Boolean)
+                                .join(" ")}
+                            </dd>
                           </div>
                         )}
                       </dl>

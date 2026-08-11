@@ -3,15 +3,17 @@
 // 釣果登録:入力操作を減らすため、日付から天気・潮を自動入力し、
 // 魚種はチップ選択、匹数はステッパーで入力する。
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
-import { FISH_SPECIES } from "@/lib/sampleSpots";
-import { calcTideInfo } from "@/lib/tide";
-import { sampleWeather } from "@/lib/weather";
+import { AREA_INFOS } from "@/lib/areas";
+import { RECORD_SPECIES } from "@/lib/fish";
+import { calcTideInfo, tideStateAt } from "@/lib/tide";
+import { degToDirName, getAreaWeathersCached } from "@/lib/weather";
 import { addRecord, getAllSpots, getTackleItems } from "@/lib/storage";
 import { useHydrated } from "@/lib/useHydrated";
 import { todayStr } from "@/lib/date";
+import type { DayWeather, TideState } from "@/lib/types";
 
 export default function RecordPage() {
   const router = useRouter();
@@ -43,17 +45,48 @@ export default function RecordPage() {
     const [y, m, d] = date.split("-").map(Number);
     return new Date(y, m - 1, d);
   }, [date]);
-  const autoTide = useMemo(() => calcTideInfo(dateObj).shio, [dateObj]);
   const spot = spots.find((s) => s.id === spotId);
-  const autoWeather = useMemo(
-    () => sampleWeather(date, spot?.id ?? "yawatahama-port"),
-    [date, spot]
+  const tideInfo = useMemo(
+    () => calcTideInfo(dateObj, spot?.tideStation ?? "yawatahama"),
+    [dateObj, spot]
   );
+  const autoTide = tideInfo.shio;
+
+  // 釣行開始時刻の潮の状態(上げ潮・下げ潮・潮止まり)
+  const autoTideState: TideState = useMemo(() => {
+    const h = Number(startTime.split(":")[0]) + Number(startTime.split(":")[1]) / 60;
+    return tideStateAt(dateObj, h, spot?.tideStation ?? "yawatahama");
+  }, [dateObj, startTime, spot]);
+
+  // その日の天気を取得して自動入力する(取得できない場合は空欄のまま)
+  const [autoWeather, setAutoWeather] = useState<DayWeather | null>(null);
+  useEffect(() => {
+    if (!hydrated || !spot) return;
+    const area = AREA_INFOS.find((a) => a.name === spot.area);
+    let cancelled = false;
+    getAreaWeathersCached(date, [
+      { key: spot.area, lat: area?.lat ?? spot.lat, lng: area?.lng ?? spot.lng },
+    ])
+      .then((w) => {
+        if (!cancelled) setAutoWeather(w[spot.area] ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAutoWeather(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, date, spot]);
+
   // 自動入力値をベースに、ユーザーが編集した場合のみ上書き値を使う
   const [weatherOverride, setWeatherOverride] = useState<string | null>(null);
   const [windOverride, setWindOverride] = useState<string | null>(null);
-  const weather = weatherOverride ?? autoWeather.label;
-  const wind = windOverride ?? `${autoWeather.windDir} ${autoWeather.windSpeedMs}m/s`;
+  const hourIdx = Math.min(23, Math.max(0, Number(startTime.split(":")[0]) || 6));
+  const hw = autoWeather?.hourly[hourIdx];
+  const weather = weatherOverride ?? hw?.label ?? "";
+  const wind =
+    windOverride ??
+    (hw ? `${degToDirName(hw.windDirDeg)} ${hw.windSpeedMs}m/s` : "");
 
   const handlePhoto = (file: File | undefined) => {
     if (!file) return;
@@ -91,9 +124,11 @@ export default function RecordPage() {
       lure: lure || undefined,
       lureWeightG: lureWeightG ? Number(lureWeightG) : undefined,
       lureColor: lureColor || undefined,
-      weather,
+      weather: weather || undefined,
       tide: autoTide,
-      wind,
+      tideState: autoTideState,
+      windDir: wind ? wind.split(" ")[0] : undefined,
+      windSpeedMs: hw?.windSpeedMs,
       photo,
       memo: memo || undefined,
     });
@@ -156,7 +191,7 @@ export default function RecordPage() {
         <div>
           <label className={labelCls}>魚種</label>
           <div className="flex flex-wrap gap-2">
-            {FISH_SPECIES.map((f) => (
+            {RECORD_SPECIES.map((f) => (
               <button
                 key={f}
                 onClick={() => setSpecies(f)}
@@ -262,17 +297,18 @@ export default function RecordPage() {
 
         <details className="rounded-xl bg-white p-3 shadow dark:bg-navy-light">
           <summary className="cursor-pointer text-base font-bold">
-            🌤️ 天気・潮・風(自動入力済み)
+            🌤️ 天気・潮・風(自動入力)
           </summary>
           <div className="mt-2 space-y-2">
             <input
               className={inputCls}
               value={weather}
               onChange={(e) => setWeatherOverride(e.target.value)}
-              placeholder="天気"
+              placeholder={autoWeather ? "天気" : "天気(データ未取得・手入力できます)"}
             />
             <p className="rounded-xl bg-ocean-50 p-3 text-base font-bold dark:bg-ocean-900">
-              潮回り:{autoTide}(自動計算)
+              潮回り: {autoTide} / 開始時の潮: {autoTideState}
+              <span className="ml-1 text-sm font-normal">(計算による参考値)</span>
             </p>
             <input
               className={inputCls}
@@ -280,6 +316,11 @@ export default function RecordPage() {
               onChange={(e) => setWindOverride(e.target.value)}
               placeholder="風(例: 北西 3m/s)"
             />
+            {!autoWeather && (
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                気象データを取得できませんでした。必要なら手入力してください。
+              </p>
+            )}
           </div>
         </details>
 
