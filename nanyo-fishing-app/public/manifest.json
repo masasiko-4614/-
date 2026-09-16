@@ -1,0 +1,24 @@
+{
+  "name": "南予釣行ナビ",
+  "short_name": "釣行ナビ",
+  "description": "愛媛県南予の海釣り 釣行判断・釣果記録アプリ",
+  "lang": "ja",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1f3f",
+  "theme_color": "#0b1f3f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
