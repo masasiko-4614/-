@@ -26,7 +26,12 @@ interface Props {
   onLongSelect?: (lat: number, lng: number) => void;
   /** 釣り場ID -> 今日の期待度。マーカーの色分けに使う */
   scores?: Record<string, number>;
+  /** この値が変わったら、表示中の釣り場がすべて入るように地図を合わせる */
+  fitKey?: string;
 }
+
+// 愛媛県とその周辺。ここから大きく外へ流れないようにする
+const MAP_BOUNDS = L.latLngBounds([32.55, 131.6], [34.25, 133.4]);
 
 function scoreColor(score: number | undefined): string {
   if (score === undefined) return "#2563eb";
@@ -69,6 +74,7 @@ export default function MapView({
   onSelect,
   onLongSelect,
   scores,
+  fitKey,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -76,6 +82,7 @@ export default function MapView({
   const tileRef = useRef<L.TileLayer | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [layer, setLayer] = useState<Layer>("地図");
+  const lastFitKeyRef = useRef(fitKey);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -88,9 +95,13 @@ export default function MapView({
       zoomDelta: 0.5,
       wheelPxPerZoomLevel: 30, // ホイール/トラックパッドのズームを速く
       wheelDebounceTime: 20,
+      // 慣性は残しつつ、指を離した後に流れすぎないようにする
       inertia: true,
-      inertiaDeceleration: 1500, // 指を離した後もよく滑る
-      inertiaMaxSpeed: 3000,
+      inertiaDeceleration: 3400,
+      inertiaMaxSpeed: 1200,
+      maxBounds: MAP_BOUNDS,
+      maxBoundsViscosity: 0.9,
+      minZoom: 8,
       touchZoom: true,
       bounceAtZoomLimits: false,
     });
@@ -133,6 +144,15 @@ export default function MapView({
       markersRef.current.set(spot.id, marker);
     });
   }, [spots, favorites, onSelect, scores]);
+
+  // 地域の絞り込みが変わったら、その地域の釣り場が収まる位置へ移動する
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || lastFitKeyRef.current === fitKey || spots.length === 0) return;
+    lastFitKeyRef.current = fitKey;
+    const bounds = L.latLngBounds(spots.map((s) => [s.lat, s.lng] as [number, number]));
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, animate: true, duration: 0.6 });
+  }, [fitKey, spots]);
 
   // 地図 / 航空写真の切り替え
   useEffect(() => {

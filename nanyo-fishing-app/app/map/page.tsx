@@ -72,6 +72,7 @@ export default function MapPage() {
           selectedId={selectedId}
           onSelect={setSelectedId}
           scores={scores}
+          fitKey={region}
         />
       </div>
 
