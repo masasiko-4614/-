@@ -20,6 +20,7 @@ import { getSettings, saveSettings, type AppSettings } from "@/lib/storage";
 import { useLocalData, useNow } from "@/lib/useClient";
 import { useDayForecasts } from "@/lib/useForecast";
 import type { FishKey, SpotForecast } from "@/lib/types";
+import { spotHref } from "@/lib/paths";
 
 const DEFAULT_SETTINGS: AppSettings = {
   homeArea: "八幡浜",
@@ -247,7 +248,7 @@ export default function NowPage() {
                   {i + 1}位
                 </span>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/spot/${c.forecast.spotId}`} className="block">
+                  <Link href={spotHref(c.forecast.spotId)} className="block">
                     <p className="truncate text-lg font-bold">{c.forecast.spotName}</p>
                   </Link>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -296,7 +297,7 @@ export default function NowPage() {
               <WarningBanner warnings={c.forecast.warnings} compact />
 
               <Link
-                href={`/spot/${c.forecast.spotId}`}
+                href={spotHref(c.forecast.spotId)}
                 className="mt-2 block rounded-xl bg-ocean-700 py-2 text-center font-bold text-white"
               >
                 詳細とルアー提案を見る
@@ -311,7 +312,7 @@ export default function NowPage() {
             <ul className="space-y-1 text-sm">
               {candidates.slice(3, 10).map((c) => (
                 <li key={c.forecast.spotId}>
-                  <Link href={`/spot/${c.forecast.spotId}`} className="flex justify-between gap-2">
+                  <Link href={spotHref(c.forecast.spotId)} className="flex justify-between gap-2">
                     <span className="truncate">
                       {c.forecast.spotName}
                       <span className="text-slate-500 dark:text-slate-400">

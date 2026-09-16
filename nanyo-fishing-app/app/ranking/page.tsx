@@ -15,6 +15,7 @@ import { buildForecast } from "@/lib/forecast";
 import { useNow } from "@/lib/useClient";
 import { useDayForecasts } from "@/lib/useForecast";
 import type { Area, FishKey, SpotForecast } from "@/lib/types";
+import { spotHref } from "@/lib/paths";
 
 /** ランキングで比較する魚種 */
 const RANKING_FISH: FishKey[] = ["アジ", "メバル", "シーバス", "アオリイカ", "青物"];
@@ -143,7 +144,7 @@ export default function RankingPage() {
             {areaRanking.map((r, i) => (
               <li key={r.area}>
                 <Link
-                  href={`/spot/${r.best.spotId}`}
+                  href={spotHref(r.best.spotId)}
                   className="flex items-center gap-2 rounded-xl bg-slate-100 p-2.5 dark:bg-navy"
                 >
                   <span className="w-8 shrink-0 text-center font-black text-ocean-700 dark:text-ocean-300">
@@ -221,7 +222,7 @@ export default function RankingPage() {
           <ol className="space-y-1 text-sm">
             {forecasts.slice(0, 20).map((f, i) => (
               <li key={f.spotId}>
-                <Link href={`/spot/${f.spotId}`} className="flex items-center gap-2">
+                <Link href={spotHref(f.spotId)} className="flex items-center gap-2">
                   <span className="w-6 shrink-0 text-right text-slate-500">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate">
                     {f.spotName}

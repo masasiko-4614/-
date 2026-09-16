@@ -12,6 +12,7 @@ import { getFavorites, toggleFavorite } from "@/lib/storage";
 import { useLocalData, useNow } from "@/lib/useClient";
 import { useDayForecasts } from "@/lib/useForecast";
 import type { Area, FishKey, Region } from "@/lib/types";
+import { spotHref } from "@/lib/paths";
 
 const NO_FAVORITES: string[] = [];
 
@@ -151,7 +152,7 @@ export default function MapPage() {
             )}
             <p className="mt-2 text-sm">{selected.fish.join("・")}</p>
             <Link
-              href={`/spot/${selected.id}`}
+              href={spotHref(selected.id)}
               className="mt-3 block rounded-xl bg-ocean-700 py-2.5 text-center font-bold text-white"
             >
               釣り場の詳細を見る

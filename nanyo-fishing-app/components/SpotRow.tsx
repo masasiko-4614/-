@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExpectationChip } from "./ExpectationBadge";
 import Stars from "./Stars";
 import type { SpotForecast } from "@/lib/types";
+import { spotHref } from "@/lib/paths";
 
 /** 上位3件はメダル風にして、順位が一目で分かるようにする */
 function rankStyle(rank: number): string {
@@ -25,7 +26,7 @@ export default function SpotRow({
   const danger = f.warnings.filter((w) => w.level === "危険").length;
   return (
     <Link
-      href={`/spot/${f.spotId}`}
+      href={spotHref(f.spotId)}
       className="block rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-colors hover:border-ocean-400 dark:border-slate-700 dark:bg-navy-light"
     >
       <div className="flex items-start gap-2">

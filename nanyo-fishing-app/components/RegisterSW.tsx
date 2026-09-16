@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { withBase } from "@/lib/paths";
 
 export default function RegisterSW() {
   useEffect(() => {
@@ -9,7 +10,9 @@ export default function RegisterSW() {
       "serviceWorker" in navigator &&
       process.env.NODE_ENV === "production"
     ) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker
+        .register(withBase("/sw.js"), { scope: withBase("/") })
+        .catch(() => {});
     }
   }, []);
   return null;
