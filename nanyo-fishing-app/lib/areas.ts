@@ -5,7 +5,10 @@ import type { Area, Region, TideStationId } from "./types";
 export interface AreaInfo {
   name: Area;
   region: Region;
-  /** 地域の中心座標(目安) */
+  /**
+   * 地域の代表地点(その地域の主な釣り場付近)。天気・風・波の取得に使う。
+   * 宇和は内陸の拠点のため卯之町を指す。
+   */
   lat: number;
   lng: number;
   /** 潮汐の参照地点 */
@@ -22,8 +25,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "伊予市",
     region: "伊予・双海・長浜",
-    lat: 33.7546,
-    lng: 132.7017,
+    lat: 33.76019,
+    lng: 132.69383,
     tideStation: "nagahama",
     key: true,
     primary: false,
@@ -32,8 +35,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "双海",
     region: "伊予・双海・長浜",
-    lat: 33.6812,
-    lng: 132.5942,
+    lat: 33.66295,
+    lng: 132.60136,
     tideStation: "nagahama",
     key: true,
     primary: false,
@@ -42,8 +45,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "長浜",
     region: "伊予・双海・長浜",
-    lat: 33.6122,
-    lng: 132.4805,
+    lat: 33.61824,
+    lng: 132.48283,
     tideStation: "nagahama",
     key: true,
     primary: true,
@@ -52,8 +55,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "大洲市沿岸",
     region: "伊予・双海・長浜",
-    lat: 33.5901,
-    lng: 132.4952,
+    lat: 33.60998,
+    lng: 132.47973,
     tideStation: "nagahama",
     key: true,
     primary: false,
@@ -64,8 +67,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "八幡浜",
     region: "八幡浜・保内",
-    lat: 33.4642,
-    lng: 132.4149,
+    lat: 33.45775,
+    lng: 132.41343,
     tideStation: "yawatahama",
     key: true,
     primary: true,
@@ -74,8 +77,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "保内",
     region: "八幡浜・保内",
-    lat: 33.4831,
-    lng: 132.4092,
+    lat: 33.47475,
+    lng: 132.39437,
     tideStation: "yawatahama",
     key: true,
     primary: false,
@@ -86,8 +89,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "伊方",
     region: "佐田岬半島",
-    lat: 33.4886,
-    lng: 132.3496,
+    lat: 33.48636,
+    lng: 132.35132,
     tideStation: "yawatahama",
     key: true,
     primary: false,
@@ -96,8 +99,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "瀬戸",
     region: "佐田岬半島",
-    lat: 33.4213,
-    lng: 132.1852,
+    lat: 33.41388,
+    lng: 132.19135,
     tideStation: "misaki",
     key: true,
     primary: false,
@@ -106,8 +109,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "三崎",
     region: "佐田岬半島",
-    lat: 33.3729,
-    lng: 132.0931,
+    lat: 33.38870,
+    lng: 132.11966,
     tideStation: "misaki",
     key: true,
     primary: false,
@@ -116,8 +119,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "佐田岬",
     region: "佐田岬半島",
-    lat: 33.3452,
-    lng: 132.0198,
+    lat: 33.34317,
+    lng: 132.01464,
     tideStation: "misaki",
     key: true,
     primary: true,
@@ -128,8 +131,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "三瓶",
     region: "宇和海北部",
-    lat: 33.3389,
-    lng: 132.4224,
+    lat: 33.37343,
+    lng: 132.41268,
     tideStation: "mikame",
     key: true,
     primary: true,
@@ -138,8 +141,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "明浜",
     region: "宇和海北部",
-    lat: 33.3455,
-    lng: 132.5281,
+    lat: 33.31305,
+    lng: 132.47075,
     tideStation: "mikame",
     key: true,
     primary: false,
@@ -148,8 +151,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "宇和",
     region: "宇和海北部",
-    lat: 33.3617,
-    lng: 132.5089,
+    lat: 33.37080,
+    lng: 132.51300,
     tideStation: "mikame",
     key: true,
     primary: false,
@@ -160,8 +163,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "吉田",
     region: "宇和島・三浦",
-    lat: 33.2683,
-    lng: 132.5417,
+    lat: 33.27101,
+    lng: 132.54105,
     tideStation: "uwajima",
     key: true,
     primary: false,
@@ -170,8 +173,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "宇和島",
     region: "宇和島・三浦",
-    lat: 33.2233,
-    lng: 132.5606,
+    lat: 33.22210,
+    lng: 132.55441,
     tideStation: "uwajima",
     key: true,
     primary: true,
@@ -180,8 +183,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "三浦半島",
     region: "宇和島・三浦",
-    lat: 33.2062,
-    lng: 132.4622,
+    lat: 33.20592,
+    lng: 132.45772,
     tideStation: "uwajima",
     key: true,
     primary: false,
@@ -190,8 +193,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "津島",
     region: "宇和島・三浦",
-    lat: 33.1319,
-    lng: 132.5289,
+    lat: 33.12009,
+    lng: 132.51123,
     tideStation: "uwajima",
     key: true,
     primary: false,
@@ -202,8 +205,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "内海",
     region: "南予南部(愛南)",
-    lat: 33.0203,
-    lng: 132.5567,
+    lat: 33.01620,
+    lng: 132.49414,
     tideStation: "ainan",
     key: true,
     primary: false,
@@ -212,8 +215,8 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "御荘",
     region: "南予南部(愛南)",
-    lat: 32.9598,
-    lng: 132.5715,
+    lat: 32.96573,
+    lng: 132.54425,
     tideStation: "mishou",
     key: true,
     primary: false,
@@ -222,18 +225,18 @@ export const AREA_INFOS: AreaInfo[] = [
   {
     name: "愛南",
     region: "南予南部(愛南)",
-    lat: 32.9312,
-    lng: 132.5378,
+    lat: 32.94331,
+    lng: 132.58566,
     tideStation: "ainan",
     key: true,
     primary: true,
-    description: "深浦・中泊など。黒潮の影響を受け、南予で最も魚種が豊富。",
+    description: "深浦・船越など。黒潮の影響を受け、南予で最も魚種が豊富。",
   },
   {
     name: "西海",
     region: "南予南部(愛南)",
-    lat: 32.9089,
-    lng: 132.4761,
+    lat: 32.91487,
+    lng: 132.50189,
     tideStation: "ainan",
     key: true,
     primary: false,
