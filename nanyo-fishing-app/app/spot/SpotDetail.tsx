@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import DataBadge from "@/components/DataBadge";
 import DateNav from "@/components/DateNav";
 import { ExpectationBig } from "@/components/ExpectationBadge";
@@ -27,8 +27,8 @@ import type { FishKey, FishingSpot } from "@/lib/types";
 const NO_FAVORITES: string[] = [];
 const NO_SPOTS: FishingSpot[] = [];
 
-export default function SpotDetailPage() {
-  const params = useParams<{ id: string }>();
+export default function SpotDetail() {
+  const spotId = useSearchParams().get("id");
   const now = useNow();
   const allSpots = useLocalData(getAllSpots, NO_SPOTS);
   const favorites = useLocalData(getFavorites, NO_FAVORITES);
@@ -36,8 +36,8 @@ export default function SpotDetailPage() {
   const [dateOverride, setDateOverride] = useState<string | null>(null);
 
   const spot = useMemo(
-    () => allSpots.find((s) => s.id === params.id),
-    [allSpots, params.id]
+    () => allSpots.find((s) => s.id === spotId),
+    [allSpots, spotId]
   );
   const today = now.dateStr ?? "";
   const dateStr = dateOverride ?? now.dateStr;

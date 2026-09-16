@@ -7,29 +7,35 @@
 // これにより、オフラインでも「登録済み釣り場・過去の釣果・前回取得した潮汐/天気」を
 // 閲覧できる。潮汐と日の出入りは端末内の計算なので通信なしで動作する。
 
-const VERSION = "v2";
+const VERSION = "v3";
 const APP_CACHE = `nanyo-app-${VERSION}`;
 const TILE_CACHE = `nanyo-tiles-${VERSION}`;
 const API_CACHE = `nanyo-api-${VERSION}`;
 const KEEP = [APP_CACHE, TILE_CACHE, API_CACHE];
 
+// 公開先のサブパス(GitHub Pages なら "/-/")。登録時の scope から求める
+const BASE = new URL(self.registration.scope).pathname;
+
 const PRECACHE = [
-  "/",
-  "/forecast",
-  "/map",
-  "/tide",
-  "/now",
-  "/ranking",
-  "/favorites",
-  "/record",
-  "/history",
-  "/analysis",
-  "/tackle",
-  "/settings",
-  "/menu",
-  "/manifest.json",
-  "/icon.svg",
-];
+  "",
+  "forecast/",
+  "map/",
+  "tide/",
+  "now/",
+  "ranking/",
+  "favorites/",
+  "record/",
+  "history/",
+  "analysis/",
+  "tackle/",
+  "settings/",
+  "menu/",
+  "spot/",
+  "manifest.json",
+  "icon.svg",
+  "icon-192.png",
+  "apple-touch-icon.png",
+].map((p) => BASE + p);
 
 /** 地図タイルの上限枚数(端末の容量を圧迫しないため) */
 const TILE_LIMIT = 400;
@@ -152,9 +158,12 @@ self.addEventListener("fetch", (event) => {
       .catch(() =>
         caches.match(request).then((cached) => {
           if (cached) return cached;
-          // 画面遷移ならトップページを返してオフラインでも操作できるようにする
-          if (request.mode === "navigate") return caches.match("/");
-          return Response.error();
+          if (request.mode !== "navigate") return Response.error();
+          // 釣り場詳細(?id=...)などはクエリ違いでも同じ画面を使える
+          return caches
+            .match(request, { ignoreSearch: true })
+            // それも無ければトップページを返してオフラインでも操作できるようにする
+            .then((page) => page ?? caches.match(BASE));
         })
       )
   );

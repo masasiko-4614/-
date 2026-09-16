@@ -2,17 +2,22 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import RegisterSW from "@/components/RegisterSW";
+import { withBase } from "@/lib/paths";
 
 export const metadata: Metadata = {
   title: "南予釣行ナビ",
   description: "愛媛県南予の海釣り 釣行判断・釣果記録アプリ",
-  manifest: "/manifest.json",
+  manifest: withBase("/manifest.json"),
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "南予釣行ナビ",
   },
-  icons: { icon: "/icon.svg" },
+  icons: {
+    icon: withBase("/icon.svg"),
+    // iPhone のホーム画面は SVG を使えないので PNG を渡す
+    apple: withBase("/apple-touch-icon.png"),
+  },
 };
 
 export const viewport: Viewport = {
