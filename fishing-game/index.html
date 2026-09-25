@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#06131f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="堤防釣り">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>南予 堤防釣り</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+  html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#06131f;font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#eef6fb;touch-action:none}
+  #wrap{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center center;--u:1}
+  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #hud{position:absolute;inset:0;pointer-events:none}
+  .panel{background:rgba(6,20,32,.7);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 14px}
+  button{pointer-events:auto;font:inherit;color:#eef6fb;background:rgba(20,60,90,.9);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:17px;touch-action:manipulation}
+  button:active{background:rgba(45,110,155,.95)}
+  @media (hover:hover){button:hover{background:rgba(35,90,130,.95)}}
+  button:disabled{opacity:.45;cursor:default}
+  #btnFull{display:none}
+  #topL{position:absolute;left:290px;top:14px;min-width:210px;font-size:15px;line-height:1.55;transform-origin:top left}
+  #clock{font-size:30px;font-weight:700;letter-spacing:1px}
+  #topR{position:absolute;right:16px;top:14px;display:flex;gap:8px;transform-origin:top right}
+  #catchInfo{position:absolute;right:16px;top:66px;font-size:15px;transform-origin:top right}
+  #msg{position:absolute;left:0;right:0;top:130px;text-align:center;font-size:40px;font-weight:800;text-shadow:0 3px 10px rgba(0,0,0,.7);opacity:0;transition:opacity .25s}
+  #msg.show{opacity:1}
+  #bottom{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;width:640px;font-size:16px}
+  .row{display:flex;align-items:center;gap:12px}
+  .row+.row{margin-top:8px}
+  #tbar{position:relative;flex:1;height:18px;background:rgba(255,255,255,.12);border-radius:9px;overflow:hidden}
+  #tfill{position:absolute;left:0;top:0;bottom:0;width:0;background:#4cd07d;border-radius:9px}
+  #tdrag{position:absolute;top:-2px;bottom:-2px;width:3px;background:#fff;box-shadow:0 0 4px #000}
+  #dragv{min-width:120px;text-align:center;font-weight:700}
+  #lineInfo{margin-left:auto;opacity:.9}
+  #hint{position:absolute;left:0;right:0;bottom:112px;text-align:center;font-size:19px;text-shadow:0 2px 6px rgba(0,0,0,.9)}
+  .ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,10,18,.6);pointer-events:auto}
+  .hidden{display:none!important}
+  .card{background:linear-gradient(#0f2c42,#0a1d2c);border:1px solid rgba(255,255,255,.2);border-radius:18px;padding:26px 34px;text-align:center;max-width:760px;box-shadow:0 20px 60px rgba(0,0,0,.5);flex:none}
+  .card h1{font-size:44px;margin-bottom:6px}
+  .card h2{font-size:30px}
+  .card p{font-size:17px;line-height:1.8;opacity:.92}
+  .card .btns{display:flex;gap:12px;justify-content:center;margin-top:18px}
+  .card .btns button{font-size:20px;padding:12px 26px}
+  #rName{font-size:34px;font-weight:800}
+  #rSize{font-size:24px;margin:4px 0}
+  #rBadge{color:#ffd54a;font-weight:800;font-size:20px;min-height:26px}
+  #rDesc{font-size:16px;opacity:.85;max-width:560px;margin:6px auto 0}
+  #bookGrid{display:grid;grid-template-columns:repeat(3,210px);gap:12px;margin:16px 0}
+  .bk{background:rgba(255,255,255,.06);border-radius:12px;padding:8px;font-size:14px;line-height:1.5}
+  .bk b{font-size:17px}
+  .howto{text-align:left;display:inline-block;margin-top:10px}
+  .pc-only{opacity:.7}
+  .touch .pc-only{display:none}
+  .sp-only{display:none;opacity:.8}
+  .touch .sp-only{display:inline}
+
+  /* ===== スマホ（画面が小さいとき）：文字とボタンを大きく、配置を変える ===== */
+  .big #topL{left:262px;top:8px;min-width:0;padding:6px 12px;display:flex;align-items:center;gap:12px;transform:scale(var(--u))}
+  .big #topL .info{line-height:1.4}
+  .big #wind{display:none}
+  .big #topR{right:8px;top:8px;transform:scale(var(--u))}
+  .big #topR button{padding:8px 12px}
+  .big #catchInfo{right:8px;top:calc(8px + 50px * var(--u));padding:5px 10px;font-size:14px;transform:scale(var(--u))}
+  .big #bottom{left:6px;bottom:6px;width:300px;padding:8px 10px;transform:scale(var(--u));transform-origin:bottom left}
+  .big #bottom .row{flex-wrap:wrap;gap:8px}
+  .big #bottom button{width:52px;height:44px;padding:0;font-size:24px;font-weight:700}
+  .big #dragv{min-width:0;flex:1}
+  .big #lineInfo{width:100%;margin:0;text-align:center;font-size:14px}
+  .big #hint{left:calc(6px + 312px * var(--u));right:8px;bottom:8px;font-size:calc(17px * var(--u));line-height:1.35}
+  .big #msg{top:170px;font-size:calc(34px * var(--u))}
+  .big .card{transform:scale(var(--cu,1))}
+
+  #turn{position:fixed;left:0;right:0;bottom:0;padding:10px calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:15px;background:rgba(0,0,0,.75);display:none;z-index:5}
+  .rotated.on-title #turn{display:block}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div id="topL" class="panel">
+      <div id="clock">05:20</div>
+      <div class="info">
+        <div id="cond">朝マヅメ</div>
+        <div id="tide">潮：上げ</div>
+        <div id="wind">風：</div>
+      </div>
+    </div>
+    <div id="topR">
+      <button id="btnTackle">仕掛け：エサ</button>
+      <button id="btnBook">📖 図鑑</button>
+      <button id="btnMute">🔊</button>
+      <button id="btnFull" title="全画面">⛶</button>
+    </div>
+    <div id="catchInfo" class="panel">クーラー 0匹 / 0g</div>
+    <div id="msg"></div>
+    <div id="hint"></div>
+    <div id="bottom" class="panel">
+      <div class="row"><span>テンション</span><div id="tbar"><div id="tfill"></div><div id="tdrag"></div></div><span id="tval">0.0kg</span></div>
+      <div class="row"><button id="dMinus">−</button><span id="dragv">ドラグ 3.0kg</span><button id="dPlus">＋</button><span id="lineInfo">糸 0.0m ／ タナ 0.0m</span></div>
+    </div>
+  </div>
+
+  <div id="title" class="ov">
+    <div class="card">
+      <h1>🎣 南予 堤防釣り</h1>
+      <p>愛媛・宇和海の堤防から、マダイ・ブリ・アジ・カサゴなどを狙おう。</p>
+      <div class="howto"><p>
+        ① <b>長押し</b>でパワーを溜めて、<b>離して</b>キャスト<br>
+        ② 着水後、<b>長押し</b>でリールを巻く／離すと沈む<br>
+        ③ 竿先がブルッと震えたら<b>すぐタップ</b>でアワセ！<br>
+        ④ ファイト中は<b>長押し</b>で巻く。<b>↑↓キー／±ボタン</b>でドラグ調整<br>
+        　 ドラグが強すぎると糸が切れ、糸がたるむと魚がバレる<br>
+        ⑤ 時間帯（マヅメ・夜）と潮で釣れる魚が変わる<br>
+        <span class="pc-only">PC：スペースキーでも操作できます</span>
+        <span class="sp-only">📱 画面のどこを押しても操作できます。ホーム画面に追加すると全画面で遊べます</span>
+      </p></div>
+      <div class="btns"><button id="btnStart">釣りを始める</button></div>
+    </div>
+  </div>
+
+  <div id="result" class="ov hidden">
+    <div class="card">
+      <h2 id="rTitle">釣れた！</h2>
+      <canvas id="rCanvas" width="640" height="260" style="width:560px;height:228px"></canvas>
+      <div id="rName"></div>
+      <div id="rSize"></div>
+      <div id="rBadge"></div>
+      <div id="rDesc"></div>
+      <div class="btns"><button id="rKeep">キープ（クーラーへ）</button><button id="rRelease">リリース</button></div>
+    </div>
+  </div>
+
+  <div id="book" class="ov hidden">
+    <div class="card">
+      <h2>📖 魚図鑑</h2>
+      <div id="bookGrid"></div>
+      <div class="btns"><button id="bookClose">閉じる</button></div>
+    </div>
+  </div>
+</div>
+<div id="turn">📱 スマホを<b>左に倒して横向き</b>にして遊んでね</div>
+
+<script>
+'use strict';
+// ====== 基本設定 ======
+const W = 1280, H = 720, SURF = 250;       // 画面サイズと海面の高さ
+const M_PER_PX = 0.05;                     // 1px = 5cm
+const HANDS = { x: 140, y: 160 };          // 竿を持つ手の位置
+const ROD_LEN = 165, ROD_ANG = -0.95;
+const SHORE_X = 175;                       // 堤防の壁
+const LINE_KG = 8;                         // 糸の強さ（フロロ約2号）
+const REEL_PXS = 36;                       // 巻き取り速度 px/秒
+const KEY = 'nanyoFishingBook_v1';
+
+const $ = id => document.getElementById(id);
+const cv = $('c'), g = cv.getContext('2d');
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const rand = (a, b) => a + Math.random() * (b - a);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const hexA = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mixA = (A, B, t) => A.map((v, i) => lerp(v, B[i], t));
+const css = (A, a = 1) => `rgba(${A[0] | 0},${A[1] | 0},${A[2] | 0},${a})`;
+
+// ====== 魚の種類（act = [マヅメ, 日中, 夜] の活性） ======
+const SPECIES = {
+  aji:     { name:'マアジ',  min:14, max:38, k:0.011, power:1.8, speed:95,  endur:0.8, bait:1.0, jig:0.55, act:[2.0,0.7,1.1], abund:5,   dep:[0.25,0.7], xr:[240,1100], win:0.55, h:0.26,
+             back:'#3d5a66', body:'#7f9aa3', belly:'#eef3f4', fin:'#c9c070', desc:'群れで回遊する大衆魚。朝夕のマヅメ時によく釣れる。' },
+  madai:   { name:'マダイ',  min:25, max:78, k:0.016, power:1.5, speed:80,  endur:1.4, bait:0.8, jig:0.6,  act:[1.6,1.0,0.4], abund:1.3, dep:[0.6,0.95], xr:[420,1260], win:0.6,  h:0.38,
+             back:'#c24a58', body:'#e37a82', belly:'#fbe6e2', fin:'#e98a8a', desc:'魚の王様で愛媛県の県魚。「三段引き」と呼ばれる力強い引きが魅力。' },
+  buri:    { name:'ブリ',    min:40, max:95, k:0.012, power:1.6, speed:150, endur:1.8, bait:0.15,jig:1.3,  act:[2.6,0.6,0.05],abund:0.7, dep:[0.08,0.55],xr:[520,1260], win:0.5,  h:0.24,
+             back:'#2f526b', body:'#7f9db2', belly:'#eff3f5', fin:'#d7c45a', desc:'成長で名前が変わる出世魚（ツバス→ハマチ→メジロ→ブリ）。ジグに猛烈に食いつき、強烈に走る。' },
+  kasago:  { name:'カサゴ',  min:12, max:32, k:0.02,  power:1.1, speed:55,  endur:0.7, bait:1.0, jig:0.35, act:[1.0,0.8,1.4], abund:3,   dep:[0.9,1.0],  rock:true,  win:0.7,  h:0.34,
+             back:'#6b2e1a', body:'#a8573a', belly:'#f0c8a0', fin:'#b9652e', desc:'岩礁に潜む根魚。掛けたら根に潜られる前に一気に巻き上げよう。' },
+  mebaru:  { name:'メバル',  min:12, max:30, k:0.017, power:1.3, speed:70,  endur:0.8, bait:0.9, jig:0.6,  act:[1.3,0.35,2.0],abund:2.5, dep:[0.45,0.85],rock:true,  win:0.6,  h:0.32,
+             back:'#3e362a', body:'#6d6150', belly:'#d8cfb8', fin:'#5b5040', desc:'大きな目が特徴。夜に活発になり、海藻や岩の周りを漂う。' },
+  kawahagi:{ name:'カワハギ',min:12, max:30, k:0.026, power:1.1, speed:50,  endur:0.6, bait:1.1, jig:0.0,  act:[0.8,1.4,0.1], abund:2.5, dep:[0.85,1.0], xr:[250,900],  win:0.32, h:0.5, steal:0.95,
+             back:'#7b6b45', body:'#b8a67a', belly:'#ece3c8', fin:'#a8945e', desc:'「エサ取り名人」。アタリは一瞬。見逃すとエサだけ取られる。肝が絶品。' },
+};
+const SP_KEYS = Object.keys(SPECIES);
+const fishPx = L => 10 + L * 0.75;              // 画面上の魚の大きさ
+const isRock = x => (x > 460 && x < 720) || x < 262;
+function bottomY(x) {
+  let b = 395 + Math.max(0, x - SHORE_X) * 0.27 + 10 * Math.sin(x * 0.013) + 6 * Math.sin(x * 0.047 + 1);
+  b = Math.min(700, b);
+  if (x > 470 && x < 710) b -= 40 * Math.sin((x - 470) / 240 * Math.PI) * (0.85 + 0.15 * Math.sin(x * 0.15));
+  return b;
+}
+function dispName(f) {
+  if (f.sp !== 'buri') return SPECIES[f.sp].name;
+  return f.L < 40 ? 'ツバス' : f.L < 60 ? 'ハマチ' : f.L < 80 ? 'メジロ' : 'ブリ';
+}
+const fmtW = w => w < 1000 ? `${Math.round(w)}g` : `${(w / 1000).toFixed(2)}kg`;
+
+// ====== 状態 ======
+let state = 'title';     // title, ready, charge, fly, water, bite, fight, result
+let tackle = 'bait';
+let drag = 3.0;
+let lure = { x: 0, y: 0, vx: 0, vy: 0, atBottom: false, baitGone: false, rot: 0 };
+let lineLen = 0, power = 0, chargeT = 0, castSwing = 0;
+let fishes = [], hooked = null, biter = null, biteT = 0;
+let tension = 0, tensionDisp = 0, slackT = 0, slipping = false;
+let input = { down: false };
+let gameMin = 5 * 60 + 20;
+let wind = rand(-2, 2), windTarget = wind;
+let T = 0, E = null, rod = null;
+let particles = [], rings = [], bubbles = [];
+let session = { count: 0, g: 0, rel: 0 };
+let pendingFish = null, respawnT = 0, reelSndT = 0, strongMsgT = 0;
+let book = loadBook();
+function loadBook() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+function saveBook() { try { localStorage.setItem(KEY, JSON.stringify(book)); } catch (e) {} }
+
+// 背景の飾り
+const stars = Array.from({ length: 90 }, () => ({ x: rand(0, W), y: rand(0, SURF - 30), r: rand(0.5, 1.6), p: rand(0, 6) }));
+const clouds = Array.from({ length: 6 }, () => ({ x: rand(0, W), y: rand(40, 170), s: rand(0.6, 1.4) }));
+const weeds = Array.from({ length: 22 }, () => { const x = rand(190, 1100); return { x, h: rand(30, 90), p: rand(0, 6) }; });
+const rocks = Array.from({ length: 16 }, () => { const x = rand(470, 710); return { x, r: rand(14, 34) }; });
+const birds = Array.from({ length: 4 }, () => ({ x: rand(300, 1200), y: rand(60, 150), a: rand(0, 6), ph: rand(0, 6) }));
+
+// ====== サウンド ======
+let AC = null, master = null, noiseBuf = null, muted = false;
+function audioInit() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = 0.6; master.connect(AC.destination);
+    noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    // 波の環境音
+    const src = AC.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 450;
+    const gn = AC.createGain(); gn.gain.value = 0.07;
+    const lfo = AC.createOscillator(); lfo.frequency.value = 0.13;
+    const lg = AC.createGain(); lg.gain.value = 0.05;
+    lfo.connect(lg); lg.connect(gn.gain); src.connect(lp); lp.connect(gn); gn.connect(master);
+    src.start(); lfo.start();
+  } catch (e) { AC = null; }
+}
+function noise(freq, q, vol, dur, type = 'bandpass', freqEnd) {
+  if (!AC || muted) return;
+  const t = AC.currentTime, s = AC.createBufferSource(); s.buffer = noiseBuf;
+  const f = AC.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
+  if (freqEnd) f.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+  const gn = AC.createGain(); gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  s.connect(f); f.connect(gn); gn.connect(master); s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
+}
+function tone(freq, dur, vol, type = 'sine', freqEnd) {
+  if (!AC || muted) return;
+  const t = AC.currentTime, o = AC.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+  const gn = AC.createGain(); gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(gn); gn.connect(master); o.start(t); o.stop(t + dur + 0.05);
+}
+const sfx = {
+  cast: () => noise(600, 1.2, 0.25, 0.35, 'bandpass', 2500),
+  splash: s => { noise(900, 0.7, 0.35 * s, 0.5, 'lowpass', 200); noise(2600, 1, 0.12 * s, 0.25); },
+  reel: () => noise(2600, 9, 0.1, 0.03),
+  drag: () => noise(4300, 6, 0.09, 0.025),
+  bite: () => { noise(500, 4, 0.4, 0.07); setTimeout(() => noise(500, 4, 0.3, 0.06), 90); },
+  hit: () => { tone(160, 0.25, 0.3, 'triangle', 80); noise(700, 2, 0.3, 0.15); },
+  brk: () => { noise(3200, 3, 0.4, 0.12); tone(420, 0.5, 0.18, 'sawtooth', 70); },
+  win: () => [660, 880, 1175].forEach((f, i) => setTimeout(() => tone(f, 0.25, 0.18, 'triangle'), i * 120)),
+};
+
+// ====== 画面サイズ ======
+let scale = 1, dpr = 1;
+const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+let rotated = false, uiScale = 1;
+if (isTouch) document.documentElement.classList.add('touch');
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  const vw = innerWidth, vh = innerHeight;
+  // スマホを縦持ちのときは、ゲーム画面を90°回して横向きで表示する
+  rotated = isTouch && vh > vw;
+  const aw = rotated ? vh : vw, ah = rotated ? vw : vh;
+  scale = Math.min(aw / W, ah / H);
+  const wrap = $('wrap');
+  wrap.style.transform = `translate(-50%,-50%) ${rotated ? 'rotate(90deg) ' : ''}scale(${scale})`;
+  // 画面が小さいときは文字とボタンを大きくする
+  const big = scale < 0.75;
+  uiScale = big ? clamp(0.85 / scale, 1, 1.7) : 1;
+  wrap.style.setProperty('--u', uiScale);
+  const root = document.documentElement.classList;
+  root.toggle('big', big);
+  root.toggle('rotated', rotated);
+  cv.width = Math.round(W * scale * dpr); cv.height = Math.round(H * scale * dpr);
+  fitCards();
+}
+// 説明・結果・図鑑のカードが画面に収まるように大きさを合わせる
+function fitCards() {
+  for (const c of document.querySelectorAll('.ov:not(.hidden) .card')) {
+    const k = Math.min(uiScale, (H - 24) / c.offsetHeight, (W - 24) / c.offsetWidth);
+    c.style.setProperty('--cu', k.toFixed(3));
+  }
+}
+addEventListener('resize', resize);
+addEventListener('orientationchange', () => setTimeout(resize, 200));
+if (window.visualViewport) visualViewport.addEventListener('resize', resize);
+resize();
+
+// ====== 入力 ======
+function press() {
+  audioInit();
+  if (state === 'bite') { input.down = true; tryHook(); return; }
+  if (input.down) return;
+  input.down = true;
+  if (state === 'ready') { state = 'charge'; chargeT = 0; }
+}
+function release() {
+  if (!input.down) return;
+  input.down = false;
+  if (state === 'charge') cast();
+}
+// 押している指を1本だけ追いかける（別の指でボタンを押しても巻き取りが止まらないように）
+let activePointer = null;
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (activePointer !== null && state !== 'bite') return;
+  if (activePointer === null) activePointer = e.pointerId;
+  press();
+});
+function pointerEnd(e) { if (e.pointerId === activePointer) { activePointer = null; release(); } }
+addEventListener('pointerup', pointerEnd);
+addEventListener('pointercancel', pointerEnd);
+addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); if (!e.repeat && state !== 'title' && state !== 'result') press(); }
+  if (e.code === 'ArrowUp') setDrag(drag + 0.5);
+  if (e.code === 'ArrowDown') setDrag(drag - 0.5);
+});
+addEventListener('keyup', e => { if (e.code === 'Space') release(); });
+// アプリを切り替えたら指を離したことにして、音も止める
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    activePointer = null; release();
+    if (AC && AC.state === 'running') AC.suspend();
+  }
+});
+function stopBtn(el, fn) { el.addEventListener('pointerdown', e => e.stopPropagation()); el.addEventListener('click', fn); }
+stopBtn($('dPlus'), () => setDrag(drag + 0.5));
+stopBtn($('dMinus'), () => setDrag(drag - 0.5));
+stopBtn($('btnTackle'), () => {
+  if (state !== 'ready') return;
+  tackle = tackle === 'bait' ? 'jig' : 'bait';
+  showMsg(tackle === 'bait' ? 'エサ（オキアミ）に変更' : 'メタルジグに変更', '#bfe8ff', 1.2);
+});
+stopBtn($('btnMute'), () => { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.6; $('btnMute').textContent = muted ? '🔇' : '🔊'; });
+stopBtn($('btnBook'), openBook);
+stopBtn($('bookClose'), () => $('book').classList.add('hidden'));
+stopBtn($('btnStart'), () => {
+  audioInit();
+  if (isTouch) goFullscreen();
+  $('title').classList.add('hidden');
+  document.documentElement.classList.remove('on-title');
+  state = 'ready'; showMsg('朝マヅメ。釣り開始！', '#ffe08a', 2);
+});
+stopBtn($('rKeep'), () => closeResult(true));
+stopBtn($('rRelease'), () => closeResult(false));
+// 全画面（Androidなど対応している機種だけボタンを出す）
+const canFull = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+if (canFull) $('btnFull').style.display = 'inline-block';
+function goFullscreen() {
+  if (!canFull || document.fullscreenElement || document.webkitFullscreenElement) return;
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  try {
+    const p = req.call(el);
+    if (p && p.then) p.then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => {});
+  } catch (e) {}
+}
+stopBtn($('btnFull'), () => {
+  if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  else goFullscreen();
+});
+document.documentElement.classList.add('on-title');
+fitCards();
+function setDrag(v) { drag = Math.round(clamp(v, 0.5, 10) * 10) / 10; }
+
+let msgTimer = 0;
+function showMsg(t, color = '#fff', dur = 1.8) { const m = $('msg'); m.textContent = t; m.style.color = color; m.classList.add('show'); msgTimer = dur; }
+
+// ====== 環境（時刻・潮） ======
+function env() {
+  const h = (gameMin / 60) % 24;
+  const sunE = Math.sin((h - 6) / 12 * Math.PI);
+  const day = clamp(sunE * 2.2 + 0.35, 0, 1);
+  const dusk = Math.exp(-Math.pow(sunE / 0.2, 2));
+  const tph = (gameMin / 60) / 12.4 * Math.PI * 2 + 1;
+  const tideLv = Math.sin(tph), tideD = Math.cos(tph);
+  const period = ((h >= 4.5 && h < 7.5) || (h >= 16.5 && h < 19.5)) ? 0 : (h >= 7.5 && h < 16.5) ? 1 : 2;
+  return { h, sunE, day, dusk, tideLv, tideD, period, tideMul: 0.75 + 0.5 * Math.abs(tideD) };
+}
+const activity = s => s.act[E.period] * E.tideMul;
+
+// ====== 魚の生成とAI ======
+function pickSpecies() {
+  const ws = SP_KEYS.map(k => SPECIES[k].abund * SPECIES[k].act[E.period]);
+  let r = Math.random() * ws.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < ws.length; i++) { r -= ws[i]; if (r <= 0) return SP_KEYS[i]; }
+  return 'aji';
+}
+function placeTarget(f) {
+  const s = SPECIES[f.sp];
+  let x = s.rock ? (Math.random() < 0.75 ? rand(475, 705) : rand(190, 255)) : rand(s.xr[0], s.xr[1]);
+  x = clamp(x, SHORE_X + 14, W - 16);
+  const by = bottomY(x);
+  f.tx = x; f.ty = clamp(SURF + (by - SURF) * rand(s.dep[0], s.dep[1]), SURF + 10, by - 6);
+  f.retarget = rand(3, 9);
+}
+function spawnFish(sp) {
+  sp = sp || pickSpecies();
+  const s = SPECIES[sp];
+  const L = Math.round((s.min + (s.max - s.min) * Math.pow(Math.random(), 2.3)) * 10) / 10;
+  const f = { sp, L, w: s.k * L * L * L, x: 0, y: 0, vx: 0, vy: 0, face: 1, tail: rand(0, 6), state: 'wander', cool: rand(0, 3), chaseT: 0 };
+  placeTarget(f); f.x = f.tx; f.y = f.ty; placeTarget(f);
+  return f;
+}
+function clampWater(f) {
+  f.x = clamp(f.x, SHORE_X + 10, W - 12);
+  f.y = clamp(f.y, SURF + 8, bottomY(f.x) - 5);
+}
+function steer(f, tx, ty, spd, dt, k = 2) {
+  const dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy) || 1;
+  f.vx += (dx / d * spd - f.vx) * Math.min(1, dt * k);
+  f.vy += (dy / d * spd - f.vy) * Math.min(1, dt * k);
+  f.x += f.vx * dt; f.y += f.vy * dt;
+}
+function lureInWater() { return state === 'water' || state === 'bite'; }
+
+function updateFishes(dt) {
+  const reeling = input.down && state === 'water';
+  const moving = reeling || (!lure.atBottom && state === 'water');
+  for (const f of fishes) {
+    if (f === hooked) continue;
+    const s = SPECIES[f.sp];
+    f.tail += dt * (5 + Math.hypot(f.vx, f.vy) / 12);
+    if (f.cool > 0) f.cool -= dt;
+    f.retarget -= dt;
+    if (f.state === 'wander') {
+      if (f.retarget < 0 || Math.hypot(f.tx - f.x, f.ty - f.y) < 15) placeTarget(f);
+      steer(f, f.tx, f.ty, s.speed * 0.32, dt, 1.2);
+      if (state === 'water' && f.cool <= 0) {
+        const pref = tackle === 'bait' ? (lure.baitGone ? 0 : s.bait) : s.jig;
+        const d = dist(f, lure);
+        if (pref > 0 && d < 175) {
+          const motion = tackle === 'jig' ? (moving ? 1 : 0.1) : (reeling ? 0.35 : 1);
+          if (Math.random() < pref * motion * activity(s) * 0.13 * dt * (1.2 - d / 175)) { f.state = 'chase'; f.chaseT = 0; }
+        }
+      }
+    } else if (f.state === 'chase') {
+      f.chaseT += dt;
+      if (state !== 'water' || (tackle === 'bait' && lure.baitGone)) { f.state = 'wander'; continue; }
+      steer(f, lure.x - f.face * fishPx(f.L) * 0.45, lure.y, s.speed * (tackle === 'jig' ? 0.95 : 0.5), dt, 2.5);
+      if (tackle === 'jig' && !moving && Math.random() < dt * 0.7) { f.state = 'wander'; f.cool = 4; }
+      if (f.chaseT > 7) { f.state = 'wander'; f.cool = 5; }
+      const mouth = { x: f.x + f.face * fishPx(f.L) * 0.5, y: f.y };
+      if (dist(mouth, lure) < 14) {
+        if (Math.random() < 0.75) startBite(f); else { f.state = 'flee'; f.fleeT = 1.2; f.cool = 6; }
+      }
+    } else if (f.state === 'flee') {
+      f.fleeT -= dt;
+      steer(f, f.x + (f.x - lure.x), f.y + (f.y - lure.y) * 0.3, s.speed * 0.9, dt, 3);
+      if (f.fleeT <= 0) { f.state = 'wander'; placeTarget(f); }
+    } else if (f.state === 'bite') {
+      f.x = lure.x - f.face * fishPx(f.L) * 0.5 + Math.sin(T * 50) * 1.5;
+      f.y = lure.y;
+      f.vx = f.face * 5; f.vy = 0;
+    }
+    if (f.state !== 'bite') clampWater(f);
+    if (Math.abs(f.vx) > 4) f.face = Math.sign(f.vx);
+  }
+  // 時間帯に合わせて魚を入れ替え
+  respawnT -= dt;
+  if (respawnT <= 0) {
+    respawnT = 25;
+    const i = fishes.findIndex(f => f.state === 'wander' && f !== hooked);
+    if (i >= 0) fishes[i] = spawnFish();
+  }
+  while (fishes.length < 14) fishes.push(spawnFish());
+}
+
+// ====== キャスト〜アタリ ======
+function cast() {
+  state = 'fly'; castSwing = 1;
+  const v = 220 + 430 * power, a = -0.72;
+  const st = { x: HANDS.x + Math.cos(ROD_ANG) * ROD_LEN, y: HANDS.y + Math.sin(ROD_ANG) * ROD_LEN };
+  lure = { x: st.x, y: st.y, vx: v * Math.cos(a) + wind * 12, vy: v * Math.sin(a), atBottom: false, baitGone: lure.baitGone, rot: 0 };
+  sfx.cast();
+}
+function startBite(f) {
+  state = 'bite'; biter = f; f.state = 'bite';
+  f.face = lure.x >= f.x ? 1 : -1;
+  const s = SPECIES[f.sp];
+  biteT = s.win * (tackle === 'bait' ? 1.3 : 1);
+  sfx.bite();
+  if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) {}
+  if (input.down && tackle === 'jig' && Math.random() < 0.55) { hookFish(f); showMsg('ガツン！向こうアワセ！', '#ffcf5a', 1.5); }
+}
+function tryHook() {
+  if (Math.random() < 0.88) hookFish(biter);
+  else missBite('すっぽ抜けた…');
+}
+function missBite(text) {
+  const f = biter, s = SPECIES[f.sp];
+  f.state = 'flee'; f.fleeT = 1.5; f.cool = 10; biter = null;
+  state = 'water';
+  if (tackle === 'bait' && Math.random() < (s.steal || 0.5)) {
+    lure.baitGone = true;
+    showMsg('エサを取られた…巻いて回収しよう', '#ffb3a0', 2.2);
+  } else showMsg(text, '#ddd', 1.5);
+}
+function hookFish(f) {
+  state = 'fight'; hooked = f; biter = null;
+  f.state = 'hooked'; f.stam = 1; f.rootT = 0; f.weakMsg = false;
+  f.mode = 'run'; f.modeT = 1.5; f.dir = { x: 0.7, y: 0.7 };
+  lineLen = dist(rod.tip, f); slackT = 0;
+  sfx.hit(); addSplash(f.x, SURF, 0.3);
+  showMsg('ヒット！', '#ffcf5a', 1.3);
+  if (navigator.vibrate) try { navigator.vibrate([80, 40, 120]); } catch (e) {}
+}
+
+// ====== ファイト ======
+function chooseMode(f) {
+  const s = SPECIES[f.sp], r = Math.random(), pRun = 0.1 + 0.7 * f.stam;
+  if (r < pRun) {
+    f.mode = 'run'; f.modeT = rand(1, 1 + 2.5 * (0.5 + f.stam));
+    const ang = rand(-0.8, 0.8);
+    let dx = Math.cos(ang), dy = Math.sin(ang) * 0.6;
+    if (s.rock) { dx = rand(-0.5, 0.5); dy = 1; }
+    if (f.sp === 'madai') dy += 0.6;
+    if (f.sp === 'buri') { dx = rand(0.5, 1); dy = rand(-0.4, 0.5); }
+    const n = Math.hypot(dx, dy); f.dir = { x: dx / n, y: dy / n };
+  } else if (r < pRun + 0.15) {
+    f.mode = 'shake'; f.modeT = rand(0.5, 1.1);
+  } else {
+    f.mode = 'rest'; f.modeT = rand(0.8, 2.3);
+    const dx = rand(-0.4, 0.6), dy = f.stam < 0.3 ? -0.8 : rand(-0.3, 0.3), n = Math.hypot(dx, dy) || 1;
+    f.dir = { x: dx / n, y: dy / n };
+  }
+}
+function fightStep(dt) {
+  const f = hooked, s = SPECIES[f.sp];
+  f.tail += dt * (f.mode === 'run' ? 22 : 12);
+  f.modeT -= dt; if (f.modeT <= 0) chooseMode(f);
+  const maxPull = f.w / 1000 * s.power + 0.2;
+  const st = 0.15 + 0.85 * f.stam;
+  const effort = f.mode === 'run' ? 1 : f.mode === 'shake' ? 0.55 : 0.18;
+  const Pf = maxPull * effort * st;
+  const spd = f.mode === 'run' ? s.speed * 1.25 * st : f.mode === 'shake' ? 25 : 18;
+  f.vx += (f.dir.x * spd - f.vx) * Math.min(1, dt * 3);
+  f.vy += (f.dir.y * spd - f.vy) * Math.min(1, dt * 3);
+  let nx = clamp(f.x + f.vx * dt, SHORE_X + 10, W - 12);
+  if (nx >= W - 14 && f.dir.x > 0) { f.dir = { x: -0.3, y: f.dir.y >= 0 ? 0.95 : -0.95 }; }  // 画面端で向きを変える
+  let ny = f.y + f.vy * dt + (f.mode === 'shake' ? Math.sin(T * 30) * 0.8 : 0);
+  ny = clamp(ny, SURF + 6, bottomY(nx) - 4);
+
+  const tip = rod.tip;
+  const dx = nx - tip.x, dy = ny - tip.y, d = Math.hypot(dx, dy), ux = dx / d, uy = dy / d;
+  const reeling = input.down;
+  const r = reeling ? REEL_PXS * dt : 0;
+  const along = Math.max(0.25, f.dir.x * ux + f.dir.y * uy);
+  let Tn = 0; slipping = false;
+  if (d < lineLen - r - 1) {            // 糸がたるんでいる
+    lineLen -= r; Tn = 0.03;
+  } else {
+    const target = lineLen - r;
+    const Traw = Pf * along + (reeling ? 0.2 + f.w / 1000 * 0.12 : 0);
+    if (Traw > drag) {                  // ドラグが滑って糸が出る
+      slipping = true;
+      const k = clamp((Traw - drag) / Math.max(0.1, Pf * along), 0, 1);
+      lineLen = target + Math.max(0, d - target) * k;
+      Tn = drag;
+    } else { lineLen = target; Tn = Traw; }
+    if (d > lineLen) { nx = tip.x + ux * lineLen; ny = Math.max(SURF + 6, tip.y + uy * lineLen); }
+  }
+  let spike = 0;
+  if (f.mode === 'shake' && Tn > 0.1) spike = maxPull * 0.3 * Math.random() * (drag / LINE_KG) * st;
+  tension = Tn + spike;
+  if (tension > LINE_KG) { lose('ラインブレイク！ドラグが強すぎた…', true); return; }
+
+  f.stam -= dt * (Tn / (maxPull + 0.3) * 0.09 + (f.mode === 'run' ? 0.03 : 0.004)) / s.endur;
+  if (Tn < 0.1) f.stam += dt * 0.015;
+  f.stam = clamp(f.stam, 0, 1);
+  if (f.stam < 0.25 && !f.weakMsg) { f.weakMsg = true; showMsg('魚が弱ってきた！一気に寄せろ！', '#9df2b0', 1.8); }
+
+  if (Tn < 0.1) {
+    slackT += dt;
+    if (slackT > 0.8 && msgTimer <= 0) showMsg('糸がたるんでいる！巻け！', '#ffd28a', 1);
+    if (slackT > 1.4 && Math.random() < dt * 0.45) { lose('バレた…糸がたるみすぎた'); return; }
+  } else slackT = 0;
+
+  if (s.rock && isRock(nx) && ny > bottomY(nx) - 14) {
+    f.rootT += dt;
+    if (f.rootT > 1 && msgTimer <= 0) showMsg('根に潜られる！巻き上げろ！', '#ffb070', 1);
+    if (f.rootT > 3) { lose('根に潜られた…根ズレで糸が切れた', true); return; }
+  } else f.rootT = Math.max(0, f.rootT - dt * 2);
+
+  f.x = nx; f.y = ny;
+  if (Math.abs(f.vx) > 4) f.face = Math.sign(f.vx);
+  lure.x = f.x + f.face * fishPx(f.L) * 0.5; lure.y = f.y;
+  if (Math.random() < dt * 3) bubbles.push({ x: f.x, y: f.y, r: rand(1, 3), life: 2 });
+  if (f.y < SURF + 12 && Math.random() < dt * 6) addSplash(f.x, SURF, 0.15);
+
+  // 取り込み
+  strongMsgT -= dt;
+  if (f.x < SHORE_X + 150 && f.y < SURF + 40) {
+    if (f.w > 1200 && f.stam > 0.3) {
+      f.mode = 'run'; f.modeT = 1.5; f.dir = { x: 0.6, y: 0.8 };
+      if (strongMsgT <= 0) { showMsg('まだ元気だ！足元で突っ込む！', '#ffb070', 1.4); strongMsgT = 3; }
+    } else landFish();
+  }
+}
+function lose(text, broke) {
+  const f = hooked;
+  if (f) { f.state = 'flee'; f.fleeT = 2; f.cool = 20; }
+  hooked = null; tension = 0; state = 'ready';
+  if (broke) { sfx.brk(); lure.baitGone = false; } else noise(1200, 1, 0.2, 0.2);
+  showMsg(text, '#ff9a8a', 2.4);
+}
+
+// ====== 釣り上げ ======
+function landFish() {
+  const f = hooked, s = SPECIES[f.sp];
+  state = 'result'; hooked = null; tension = 0; tensionDisp = 0;
+  fishes = fishes.filter(x => x !== f);
+  addSplash(SHORE_X + 60, SURF, 0.8); sfx.splash(0.7); sfx.win();
+  const rec = book[f.sp] || { count: 0, best: 0, bestW: 0 };
+  const first = rec.count === 0, record = f.L > rec.best;
+  rec.count++; if (record) { rec.best = f.L; rec.bestW = f.w; }
+  book[f.sp] = rec; saveBook();
+  pendingFish = f;
+  $('rTitle').textContent = f.w > 2000 ? '大物だ！！' : '釣れた！';
+  $('rName').textContent = dispName(f) + (f.sp === 'buri' && dispName(f) !== 'ブリ' ? '（ブリの若魚）' : '');
+  $('rSize').textContent = `${f.L.toFixed(1)} cm ／ ${fmtW(f.w)}`;
+  $('rBadge').textContent = first ? '🆕 図鑑に新登録！' : record ? '🏆 自己記録更新！' : '';
+  $('rDesc').textContent = s.desc;
+  const rc = $('rCanvas'), rg = rc.getContext('2d');
+  rg.clearRect(0, 0, rc.width, rc.height);
+  const len = clamp(fishPx(f.L) * 4.2, 240, 560);
+  rg.save(); rg.translate(rc.width / 2 + len * 0.06, rc.height / 2); rg.rotate(-0.06);
+  drawFishShape(rg, f.sp, len, 0.25, false); rg.restore();
+  $('result').classList.remove('hidden');
+  fitCards();
+}
+function closeResult(keep) {
+  if (!pendingFish) return;
+  if (keep) { session.count++; session.g += pendingFish.w; } else session.rel++;
+  pendingFish = null;
+  $('result').classList.add('hidden');
+  state = 'ready';
+}
+function openBook() {
+  const grid = $('bookGrid'); grid.innerHTML = '';
+  for (const k of SP_KEYS) {
+    const s = SPECIES[k], rec = book[k];
+    const div = document.createElement('div'); div.className = 'bk';
+    const c = document.createElement('canvas'); c.width = 380; c.height = 150; c.style.width = '190px'; c.style.height = '75px';
+    const cg = c.getContext('2d'); cg.translate(200, 75);
+    drawFishShape(cg, k, k === 'kawahagi' ? 190 : 250, 0, !rec);
+    div.appendChild(c);
+    const info = document.createElement('div');
+    info.innerHTML = rec
+      ? `<b>${s.name}</b><br>釣った数 ${rec.count}匹<br>最大 ${rec.best.toFixed(1)}cm（${fmtW(rec.bestW)}）`
+      : `<b>？？？</b><br>まだ釣っていない<br>&nbsp;`;
+    div.appendChild(info); grid.appendChild(div);
+  }
+  $('book').classList.remove('hidden');
+  fitCards();
+}
+
+// ====== エフェクト ======
+function addSplash(x, y, s) {
+  for (let i = 0; i < 6 + s * 20; i++) particles.push({ x, y, vx: rand(-70, 70) * (0.5 + s), vy: rand(-220, -60) * (0.6 + s), life: rand(0.5, 1) });
+  rings.push({ x, r: 4, life: 1, s });
+}
+function updateParticles(dt) {
+  for (const p of particles) { p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  particles = particles.filter(p => p.life > 0 && p.y < SURF + 6);
+  for (const r of rings) { r.r += dt * 40 * (1 + r.s); r.life -= dt * 0.8; }
+  rings = rings.filter(r => r.life > 0);
+  for (const b of bubbles) { b.y -= dt * 40; b.x += Math.sin(T * 3 + b.r) * 0.3; b.life -= dt; }
+  bubbles = bubbles.filter(b => b.life > 0 && b.y > SURF + 2);
+}
+function updateBirds(dt) {
+  const nabura = E.day > 0.25 ? fishes.find(f => f.sp === 'buri' && f.y < SURF + 70 && f.state !== 'hooked') : null;
+  if (nabura && Math.random() < dt * 1.5) addSplash(nabura.x + rand(-30, 30), SURF, 0.12);
+  for (const b of birds) {
+    let tx, ty;
+    if (E.day < 0.2) { tx = b.x + 50; ty = -80; }
+    else if (nabura) { b.a += dt * 1.6; tx = nabura.x + Math.cos(b.a + b.ph) * 70; ty = 110 + Math.sin(b.a * 1.3 + b.ph) * 25; }
+    else { tx = 700 + Math.sin(T * 0.07 + b.ph) * 480; ty = 90 + Math.sin(T * 0.2 + b.ph * 2) * 40; }
+    b.x += (tx - b.x) * dt * 0.7; b.y += (ty - b.y) * dt * 0.7;
+  }
+}
+
+// ====== 竿の形 ======
+function lineEnd() {
+  if (state === 'fly' || state === 'water' || state === 'bite' || state === 'fight') return lure;
+  return null;
+}
+function computeRod() {
+  let ang = ROD_ANG;
+  if (state === 'charge') ang -= 1.0 * Math.min(1, chargeT * 4);
+  if (castSwing > 0) ang += -1.0 * Math.pow(castSwing, 3) + 0.6 * Math.sin(castSwing * Math.PI);
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  const st = { x: HANDS.x + ca * ROD_LEN, y: HANDS.y + sa * ROD_LEN };
+  let bend = 0, tx = st.x, ty = st.y + 50;
+  const e = lineEnd();
+  if (e && state !== 'fly') {
+    tx = e.x; ty = e.y;
+    bend = clamp(tensionDisp / LINE_KG, 0, 1) * 0.95;
+    if (state === 'water') bend = Math.max(bend, input.down ? 0.1 : 0.04);
+  }
+  let jerk = 0;
+  if (state === 'bite') { bend += 0.1; jerk = Math.sin(T * 42) * 5; }
+  let dA = Math.atan2(ty - st.y, tx - st.x) - ang;
+  while (dA > Math.PI) dA -= 2 * Math.PI;
+  while (dA < -Math.PI) dA += 2 * Math.PI;
+  const tipA = ang + dA * bend * 0.55, rl = ROD_LEN * (1 - bend * 0.1);
+  rod = {
+    butt: { x: HANDS.x - ca * 28, y: HANDS.y - sa * 28 },
+    ctrl: { x: HANDS.x + ca * ROD_LEN * 0.55, y: HANDS.y + sa * ROD_LEN * 0.55 },
+    tip: { x: HANDS.x + Math.cos(tipA) * rl, y: HANDS.y + Math.sin(tipA) * rl + jerk },
+    ca, sa,
+  };
+}
+
+// ====== 更新 ======
+function update(dt) {
+  T += dt;
+  if (state !== 'title' && state !== 'result') gameMin += dt / 3;   // 実時間3分＝ゲーム内1時間
+  E = env();
+  if (Math.random() < dt * 0.05) windTarget = rand(-3, 3);
+  wind += (windTarget - wind) * dt * 0.3;
+  castSwing = Math.max(0, castSwing - dt * 3.5);
+  if (msgTimer > 0) { msgTimer -= dt; if (msgTimer <= 0) $('msg').classList.remove('show'); }
+  computeRod();
+
+  if (state === 'charge') { chargeT += dt; power = (1 - Math.cos(chargeT * 2.6)) / 2; }
+  else if (state === 'fly') {
+    lure.vy += 520 * dt; lure.x += lure.vx * dt; lure.y += lure.vy * dt; lure.rot += dt * 10;
+    if (lure.x > W - 20) { lure.x = W - 20; lure.vx = 0; }
+    if (lure.y >= SURF) {
+      lure.y = SURF + 2; lure.vx = 0; lure.vy = 0; state = 'water';
+      addSplash(lure.x, SURF, 0.35); sfx.splash(0.4);
+    }
+  } else if (state === 'water' || state === 'bite') {
+    const reeling = input.down && state === 'water';
+    if (reeling) {
+      const tip = rod.tip, dx = tip.x - lure.x, dy = tip.y - lure.y, d = Math.hypot(dx, dy);
+      const sp = REEL_PXS * (tackle === 'jig' ? 1 + 0.7 * Math.sin(T * 9) : 0.8);
+      lure.x += dx / d * sp * dt; lure.y += dy / d * sp * dt;
+      if (lure.y < SURF + 4) lure.y = SURF + 4;
+      lure.atBottom = false;
+      lure.rot = tackle === 'jig' ? Math.sin(T * 9) * 0.6 : 0;
+      reelSndT -= dt; if (reelSndT <= 0) { sfx.reel(); reelSndT = 0.065; }
+    } else if (!lure.atBottom && state === 'water') {
+      lure.y += (tackle === 'jig' ? 55 : 28) * dt; lure.x -= 4 * dt;
+      lure.rot = tackle === 'jig' ? Math.sin(T * 5) * 0.9 : 0;
+    }
+    const by = bottomY(lure.x) - 3;
+    if (lure.y >= by) { lure.y = by; lure.atBottom = true; }
+    lineLen = dist(rod.tip, lure);
+    tension = reeling ? 0.3 : 0.05;
+    if (state === 'bite') { biteT -= dt; if (biteT <= 0) missBite('アタリを逃した…'); }
+    if (state === 'water' && lineLen < 185) {
+      state = 'ready';
+      if (lure.baitGone && tackle === 'bait') { lure.baitGone = false; showMsg('エサを付け直した', '#bfe8ff', 1.2); }
+    }
+  } else if (state === 'fight') {
+    fightStep(dt);
+    if (state === 'fight') {
+      reelSndT -= dt;
+      if (reelSndT <= 0) {
+        if (slipping) { sfx.drag(); reelSndT = 0.028; }
+        else if (input.down) { sfx.reel(); reelSndT = 0.065; }
+      }
+    }
+  } else if (state === 'ready') tension = 0;
+
+  tensionDisp += (tension - tensionDisp) * Math.min(1, dt * 12);
+  if (state !== 'title') updateFishes(dt);
+  updateParticles(dt);
+  updateBirds(dt);
+  updateHUD();
+}
+
+// ====== HUD ======
+const HINTS = {
+  ready: () => tackle === 'bait' ? '長押しでパワーを溜めて、離してキャスト（エサは底でじっと待つのが基本）' : '長押しでパワーを溜めて、離してキャスト（ジグは巻いて・沈めて誘う）',
+  charge: () => 'ゲージが最大のときに離すと遠くへ飛ぶ！',
+  fly: () => '',
+  water: () => lure.baitGone ? 'エサが無い！長押しで巻いて回収' : tackle === 'bait' ? '待つ or 長押しでゆっくり巻く。竿先の反応に集中…' : '長押しで巻く（ジャーク）／離してフォール。動きで誘おう',
+  bite: () => '⚡ 今だ！タップでアワセ！',
+  fight: () => '長押しで巻く。テンションが赤なら巻くのを休み、たるんだら巻く',
+  result: () => '', title: () => '',
+};
+const CONDS = [['朝マヅメ 🌅', '夕マヅメ 🌇'], '日中 ☀️', '夜 🌙'];
+// 変わったときだけ画面の文字を書き換える（スマホで重くならないように）
+const _txt = {};
+function setT(id, t) { if (_txt[id] !== t) { _txt[id] = t; $(id).textContent = t; } }
+function setS(id, prop, v) { const k = id + prop; if (_txt[k] !== v) { _txt[k] = v; $(id).style[prop] = v; } }
+function updateHUD() {
+  const h = E.h, hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+  setT('clock', `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+  setT('cond', E.period === 0 ? CONDS[0][h < 12 ? 0 : 1] + '（高活性）' : CONDS[E.period]);
+  setT('tide', '潮：' + (E.tideD > 0.3 ? '上げ潮 ↗' : E.tideD < -0.3 ? '下げ潮 ↘' : E.tideLv > 0 ? '満潮（潮止まり）' : '干潮（潮止まり）'));
+  setT('wind', `風：${Math.abs(wind).toFixed(1)}m/s ${wind > 0.3 ? '追い風' : wind < -0.3 ? '向かい風' : '無風'}`);
+  setT('catchInfo', `クーラー ${session.count}匹 / ${fmtW(session.g)}　リリース ${session.rel}`);
+  setT('btnTackle', '仕掛け：' + (tackle === 'bait' ? 'エサ' : 'ジグ'));
+  $('btnTackle').disabled = state !== 'ready';
+  const tf = clamp(tensionDisp / LINE_KG, 0, 1);
+  setS('tfill', 'width', (tf * 100).toFixed(1) + '%');
+  setS('tfill', 'background', tf > 0.85 ? '#ff4d4d' : tf > 0.6 ? '#ffc23d' : '#4cd07d');
+  setS('tdrag', 'left', `calc(${clamp(drag / LINE_KG, 0, 1) * 100}% - 1px)`);
+  setT('tval', tensionDisp.toFixed(1) + 'kg');
+  setT('dragv', `ドラグ ${drag.toFixed(1)}kg`);
+  const e = lineEnd();
+  const depth = e && e.y > SURF ? (e.y - SURF) * M_PER_PX : 0;
+  setT('lineInfo', `糸 ${(e ? lineLen * M_PER_PX : 0).toFixed(1)}m ／ タナ ${depth.toFixed(1)}m`);
+  setT('hint', HINTS[state]());
+}
+
+// ====== 描画 ======
+const COL = {
+  nTop: hexA('#070b22'), dTop: hexA('#3d86d1'),
+  nHor: hexA('#1b2748'), dHor: hexA('#bfe2f3'), dusk: hexA('#ff9258'),
+  nSea: hexA('#081a2b'), dSea: hexA('#2b7fa6'),
+  nDeep: hexA('#01040a'), dDeep: hexA('#08314b'),
+};
+function draw() {
+  g.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  const day = E.day;
+  // 空
+  const top = mixA(COL.nTop, COL.dTop, day);
+  const hor = mixA(mixA(COL.nHor, COL.dHor, day), COL.dusk, E.dusk * 0.7);
+  let gr = g.createLinearGradient(0, 0, 0, SURF);
+  gr.addColorStop(0, css(top)); gr.addColorStop(1, css(hor));
+  g.fillStyle = gr; g.fillRect(0, 0, W, SURF);
+  // 星と月
+  if (day < 0.6) {
+    for (const s of stars) { g.fillStyle = `rgba(255,255,255,${(1 - day / 0.6) * (0.5 + 0.5 * Math.sin(T * 2 + s.p))})`; g.fillRect(s.x, s.y, s.r, s.r); }
+  }
+  const sunX = W * (1 - (E.h - 6) / 12), sunY = SURF - E.sunE * 230;
+  if (E.sunE > -0.15) {
+    const sg = g.createRadialGradient(sunX, sunY, 0, sunX, sunY, 70);
+    sg.addColorStop(0, 'rgba(255,245,210,1)'); sg.addColorStop(0.25, `rgba(255,${200 + day * 40 | 0},140,.9)`); sg.addColorStop(1, 'rgba(255,200,120,0)');
+    g.fillStyle = sg; g.beginPath(); g.arc(sunX, sunY, 70, 0, 7); g.fill();
+  }
+  const mh = (E.h + 12) % 24, moonE = Math.sin((mh - 6) / 12 * Math.PI);
+  if (moonE > -0.1) {
+    const mx = W * (1 - (mh - 6) / 12), my = SURF - moonE * 210;
+    g.fillStyle = `rgba(240,240,220,${0.9 - day * 0.6})`; g.beginPath(); g.arc(mx, my, 16, 0, 7); g.fill();
+    g.fillStyle = css(top, 0.9); g.beginPath(); g.arc(mx + 7, my - 4, 14, 0, 7); g.fill();
+  }
+  // 雲
+  const cloudC = mixA(hexA('#2a3048'), mixA(hexA('#ffffff'), hexA('#ffc7a0'), E.dusk * 0.6), day);
+  for (const c of clouds) {
+    c.x += 0.15 * c.s; if (c.x > W + 150) c.x = -150;
+    g.fillStyle = css(cloudC, 0.55);
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(c.x + i * 28 * c.s, c.y - Math.sin(i * 1.3) * 10 * c.s, 34 * c.s, 16 * c.s, 0, 0, 7); g.fill(); }
+  }
+  // 島（宇和海の島々）
+  const islC = mixA(mixA(hexA('#141a2c'), hexA('#6f8fa6'), day), hexA('#a86a5a'), E.dusk * 0.3);
+  g.fillStyle = css(islC);
+  g.beginPath(); g.moveTo(560, SURF); g.quadraticCurveTo(640, SURF - 55, 720, SURF - 30); g.quadraticCurveTo(780, SURF - 48, 860, SURF); g.fill();
+  g.fillStyle = css(mixA(islC, hor, 0.35));
+  g.beginPath(); g.moveTo(950, SURF); g.quadraticCurveTo(1040, SURF - 34, 1120, SURF - 22); g.quadraticCurveTo(1200, SURF - 30, 1280, SURF - 12); g.lineTo(1280, SURF); g.fill();
+  // 鳥
+  g.strokeStyle = day > 0.3 ? 'rgba(40,50,60,.85)' : 'rgba(200,200,220,.5)'; g.lineWidth = 2;
+  for (const b of birds) {
+    const fl = Math.sin(T * 8 + b.ph) * 5;
+    g.beginPath(); g.moveTo(b.x - 10, b.y - fl); g.quadraticCurveTo(b.x - 4, b.y - 4, b.x, b.y); g.quadraticCurveTo(b.x + 4, b.y - 4, b.x + 10, b.y - fl); g.stroke();
+  }
+
+  // 海
+  const sea = mixA(COL.nSea, COL.dSea, day), deep = mixA(COL.nDeep, COL.dDeep, day);
+  gr = g.createLinearGradient(0, SURF, 0, H);
+  gr.addColorStop(0, css(sea)); gr.addColorStop(1, css(deep));
+  g.fillStyle = gr; g.fillRect(0, SURF, W, H - SURF);
+  // 光の筋
+  if (day > 0.2) {
+    for (let i = 0; i < 7; i++) {
+      const x0 = ((i * 190 + T * 12) % 1400) - 60, w0 = 30 + 20 * Math.sin(i + T * 0.5);
+      g.fillStyle = `rgba(200,240,255,${0.045 * day})`;
+      g.beginPath(); g.moveTo(x0, SURF); g.lineTo(x0 + w0, SURF); g.lineTo(x0 + w0 + 120, H); g.lineTo(x0 + 60, H); g.fill();
+    }
+  }
+  // 海底
+  const sand = mixA(hexA('#1c1a14'), hexA('#b8a57a'), day * 0.8);
+  g.fillStyle = css(sand);
+  g.beginPath(); g.moveTo(SHORE_X, H);
+  for (let x = SHORE_X; x <= W; x += 8) g.lineTo(x, bottomY(x));
+  g.lineTo(W, H); g.fill();
+  const rockC = mixA(hexA('#101010'), hexA('#5a5248'), day * 0.8);
+  for (const r of rocks) { g.fillStyle = css(rockC); g.beginPath(); g.ellipse(r.x, bottomY(r.x) + r.r * 0.3, r.r * 1.3, r.r, 0, 0, 7); g.fill(); }
+  // 海藻
+  g.lineCap = 'round';
+  for (const w of weeds) {
+    const by = bottomY(w.x), sw = Math.sin(T * 1.2 + w.p) * 14;
+    g.strokeStyle = css(mixA(hexA('#0c1a0c'), hexA('#4f7a3a'), day * 0.8)); g.lineWidth = 4;
+    g.beginPath(); g.moveTo(w.x, by); g.quadraticCurveTo(w.x + sw, by - w.h * 0.6, w.x + sw * 1.4, by - w.h); g.stroke();
+  }
+  // 堤防とテトラ
+  gr = g.createLinearGradient(0, 205, SHORE_X, 205);
+  gr.addColorStop(0, css(mixA(hexA('#2a2a2a'), hexA('#9a9892'), day)));
+  gr.addColorStop(1, css(mixA(hexA('#1c1c1c'), hexA('#7d7b75'), day)));
+  g.fillStyle = gr; g.fillRect(0, 205, SHORE_X, H - 205);
+  g.fillStyle = css(mixA(hexA('#3a3a3a'), hexA('#c4c2ba'), day)); g.fillRect(0, 203, SHORE_X, 7);
+  g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 1;
+  for (let y = 250; y < H; y += 60) { g.beginPath(); g.moveTo(0, y); g.lineTo(SHORE_X, y); g.stroke(); }
+  g.fillStyle = css(mixA(hexA('#1a1a1a'), hexA('#6d6a64'), day * 0.8));
+  for (let i = 0; i < 6; i++) {
+    const tx = SHORE_X + 10 + (i % 3) * 28, ty = bottomY(SHORE_X + 20) - 12 - Math.floor(i / 3) * 30;
+    g.beginPath(); g.moveTo(tx, ty - 18); g.lineTo(tx + 18, ty + 12); g.lineTo(tx - 16, ty + 12); g.closePath(); g.fill();
+  }
+
+  // 魚
+  for (const f of fishes) drawFishAt(f);
+  // 泡
+  g.fillStyle = 'rgba(220,245,255,.5)';
+  for (const b of bubbles) { g.beginPath(); g.arc(b.x, b.y, b.r, 0, 7); g.fill(); }
+  // 仕掛けと糸
+  drawLure();
+  drawLine();
+  // 深さによる濁り
+  gr = g.createLinearGradient(0, SURF, 0, H);
+  gr.addColorStop(0, css(deep, 0)); gr.addColorStop(0.35, css(deep, 0.25)); gr.addColorStop(1, css(deep, 0.78));
+  g.fillStyle = gr; g.fillRect(0, SURF, W, H - SURF);
+  // 夜は常夜灯の光が海に届く
+  if (day < 0.5) {
+    const lg = g.createRadialGradient(40, 110, 10, 40, 300, 380);
+    lg.addColorStop(0, `rgba(255,220,140,${0.25 * (1 - day * 2)})`); lg.addColorStop(1, 'rgba(255,220,140,0)');
+    g.fillStyle = lg; g.fillRect(0, 0, 520, H);
+  }
+  // 海面
+  g.beginPath(); g.moveTo(SHORE_X, SURF);
+  for (let x = SHORE_X; x <= W; x += 10) g.lineTo(x, SURF + Math.sin(x * 0.03 + T * 1.6) * 2 + Math.sin(x * 0.011 - T) * 1.5);
+  g.lineTo(W, SURF + 14); g.lineTo(SHORE_X, SURF + 14); g.closePath();
+  g.fillStyle = css(mixA(sea, hexA('#ffffff'), 0.25), 0.35); g.fill();
+  g.strokeStyle = css(mixA(hor, hexA('#ffffff'), 0.4), 0.8); g.lineWidth = 1.5;
+  g.beginPath();
+  for (let x = SHORE_X; x <= W; x += 10) { const y = SURF + Math.sin(x * 0.03 + T * 1.6) * 2 + Math.sin(x * 0.011 - T) * 1.5; x === SHORE_X ? g.moveTo(x, y) : g.lineTo(x, y); }
+  g.stroke();
+  // 波紋・しぶき
+  for (const r of rings) { g.strokeStyle = `rgba(255,255,255,${r.life * 0.6})`; g.lineWidth = 1.5; g.beginPath(); g.ellipse(r.x, SURF + 1, r.r, r.r * 0.22, 0, 0, 7); g.stroke(); }
+  g.fillStyle = 'rgba(235,248,255,.9)';
+  for (const p of particles) { g.beginPath(); g.arc(p.x, p.y, 2, 0, 7); g.fill(); }
+
+  // 常夜灯
+  g.fillStyle = '#333'; g.fillRect(28, 80, 5, 125);
+  g.fillStyle = day < 0.5 ? '#ffe6a0' : '#bbb'; g.fillRect(20, 74, 22, 9);
+  if (day < 0.5) {
+    const lg = g.createRadialGradient(31, 82, 2, 31, 82, 90);
+    lg.addColorStop(0, `rgba(255,230,160,${0.6 * (1 - day * 2)})`); lg.addColorStop(1, 'rgba(255,230,160,0)');
+    g.fillStyle = lg; g.beginPath(); g.arc(31, 82, 90, 0, 7); g.fill();
+  }
+  drawPlayer();
+  drawRod();
+  // アタリの表示
+  if (state === 'bite') {
+    g.fillStyle = '#ffdd33'; g.font = 'bold 44px sans-serif'; g.textAlign = 'center';
+    g.fillText('!', rod.tip.x + 18, rod.tip.y - 8);
+  }
+  // キャストのパワーゲージ
+  if (state === 'charge') {
+    const x = 60, y = 40, w = 16, h = 150;
+    g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(x - 3, y - 3, w + 6, h + 6);
+    const pg = g.createLinearGradient(0, y + h, 0, y); pg.addColorStop(0, '#4cd07d'); pg.addColorStop(0.7, '#ffc23d'); pg.addColorStop(1, '#ff4d4d');
+    g.fillStyle = pg; g.fillRect(x, y + h * (1 - power), w, h * power);
+    g.fillStyle = '#fff'; g.font = 'bold 14px sans-serif'; g.textAlign = 'center';
+    g.fillText(Math.round(power * 100) + '%', x + w / 2, y + h + 22);
+  }
+}
+function drawPlayer() {
+  const x = 108, fy = 204, day = E.day;
+  const shade = t => css(mixA(hexA('#101018'), hexA(t), Math.max(0.35, day)));
+  g.lineCap = 'round';
+  g.strokeStyle = shade('#2b3140'); g.lineWidth = 8;
+  g.beginPath(); g.moveTo(x - 7, fy); g.lineTo(x - 2, fy - 32); g.moveTo(x + 9, fy); g.lineTo(x + 4, fy - 32); g.stroke();
+  g.fillStyle = shade('#e8662c'); g.beginPath(); g.roundRect ? g.roundRect(x - 13, fy - 66, 28, 38, 7) : g.rect(x - 13, fy - 66, 28, 38); g.fill();
+  g.fillStyle = shade('#f1c9a3'); g.beginPath(); g.arc(x + 3, fy - 76, 9, 0, 7); g.fill();
+  g.fillStyle = shade('#1f3b5a'); g.beginPath(); g.arc(x + 3, fy - 78, 9.5, Math.PI, 0); g.fill(); g.fillRect(x + 3, fy - 80, 15, 3);
+  g.strokeStyle = shade('#34495e'); g.lineWidth = 6;
+  g.beginPath(); g.moveTo(x + 6, fy - 58); g.lineTo(HANDS.x - 6, HANDS.y + 4); g.lineTo(HANDS.x, HANDS.y); g.stroke();
+}
+function drawRod() {
+  const r = rod;
+  g.strokeStyle = '#1b1b1b'; g.lineWidth = 5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(r.butt.x, r.butt.y); g.lineTo(HANDS.x, HANDS.y); g.stroke();
+  g.strokeStyle = '#2d2a26'; g.lineWidth = 3.2;
+  g.beginPath(); g.moveTo(HANDS.x, HANDS.y); g.quadraticCurveTo(r.ctrl.x, r.ctrl.y, r.tip.x, r.tip.y); g.stroke();
+  g.strokeStyle = '#d8d0b0'; g.lineWidth = 1.2;
+  const mx = (r.ctrl.x + r.tip.x) / 2, my = (r.ctrl.y + r.tip.y) / 2;
+  g.beginPath(); g.moveTo(mx, my); g.quadraticCurveTo((mx + r.tip.x) / 2 + 1, (my + r.tip.y) / 2, r.tip.x, r.tip.y); g.stroke();
+  // リール
+  const rx = HANDS.x - r.ca * 6 + 6, ry = HANDS.y - r.sa * 6 + 8;
+  g.fillStyle = '#9aa3ad'; g.beginPath(); g.arc(rx, ry, 7, 0, 7); g.fill();
+  g.strokeStyle = '#444'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx + Math.cos(T * (input.down && (state === 'water' || state === 'fight') ? 14 : 0)) * 8, ry + Math.sin(T * (input.down ? 14 : 0)) * 8); g.stroke();
+}
+function drawLine() {
+  const e = lineEnd(); if (!e) return;
+  const t = rod.tip, d = dist(t, e);
+  const slack = state === 'fight' ? Math.max(0, lineLen - d) : state === 'fly' ? 8 : (lure.atBottom ? 25 : 12);
+  const tf = clamp(tensionDisp / LINE_KG, 0, 1);
+  const sag = Math.min(160, 6 + slack * 0.7) * (1 - tf * 0.9);
+  g.strokeStyle = 'rgba(235,245,255,.7)'; g.lineWidth = 1.1;
+  g.beginPath(); g.moveTo(t.x, t.y); g.quadraticCurveTo((t.x + e.x) / 2, (t.y + e.y) / 2 + sag, e.x, e.y); g.stroke();
+}
+function drawLure() {
+  if (!lineEnd() || state === 'fight') return;
+  g.save(); g.translate(lure.x, lure.y); g.rotate(lure.rot || 0);
+  if (tackle === 'jig') {
+    const jg = g.createLinearGradient(0, -4, 0, 4); jg.addColorStop(0, '#6ec8ff'); jg.addColorStop(0.5, '#f4f8ff'); jg.addColorStop(1, '#8a98a8');
+    g.fillStyle = jg; g.beginPath(); g.moveTo(-11, 0); g.quadraticCurveTo(0, -5, 11, 0); g.quadraticCurveTo(0, 5, -11, 0); g.fill();
+    if (Math.sin(T * 9) > 0.7) { g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.arc(2, -1, 2.5, 0, 7); g.fill(); }
+  } else {
+    g.fillStyle = '#555'; g.beginPath(); g.arc(0, -16, 3.5, 0, 7); g.fill();      // オモリ
+    g.strokeStyle = '#ccc'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, -12); g.lineTo(0, 0); g.arc(3, 0, 3, Math.PI, 0.3, true); g.stroke();
+    if (!lure.baitGone) { g.fillStyle = '#f59b8f'; g.beginPath(); g.ellipse(2, 1, 5, 3, 0.5, 0, 7); g.fill(); }
+  }
+  g.restore();
+}
+function drawFishAt(f) {
+  const len = fishPx(f.L);
+  const tilt = clamp(Math.atan2(f.vy, Math.abs(f.vx) + 1), -0.6, 0.6);
+  g.save(); g.translate(f.x, f.y); g.scale(f.face, 1); g.rotate(tilt);
+  drawFishShape(g, f.sp, len, Math.sin(f.tail) * (f.state === 'hooked' ? 1 : 0.6), false);
+  g.restore();
+}
+const prand = i => { const v = Math.sin(i * 12.9898) * 43758.5453; return v - Math.floor(v); };
+function drawFishShape(ctx, sp, len, tw, sil) {
+  const s = SPECIES[sp], h = len * s.h, L2 = len / 2, tx = -L2 + len * 0.06, sw = tw * h * 0.35;
+  const C = c => sil ? '#1d2a36' : c;
+  ctx.lineJoin = 'round';
+  ctx.fillStyle = C(s.fin);
+  // 尾びれ
+  ctx.beginPath(); ctx.moveTo(tx + len * 0.05, 0);
+  ctx.lineTo(tx - len * 0.19, -h * 0.5 + sw);
+  ctx.quadraticCurveTo(tx - len * 0.1, sw * 0.5, tx - len * 0.19, h * 0.5 + sw);
+  ctx.closePath(); ctx.fill();
+  // 背びれ
+  ctx.beginPath();
+  if (sp === 'kasago' || sp === 'mebaru') {
+    ctx.moveTo(-L2 * 0.55, -h * 0.35);
+    for (let i = 0; i <= 8; i++) { const x = lerp(-L2 * 0.55, L2 * 0.4, i / 8); ctx.lineTo(x, -h * (i % 2 ? 0.55 : 0.78)); }
+    ctx.lineTo(L2 * 0.45, -h * 0.35);
+  } else if (sp === 'kawahagi') {
+    ctx.moveTo(-L2 * 0.6, -h * 0.25); ctx.quadraticCurveTo(-L2 * 0.35, -h * 0.62, -L2 * 0.05, -h * 0.38);
+  } else {
+    ctx.moveTo(-L2 * 0.45, -h * 0.38); ctx.quadraticCurveTo(-L2 * 0.05, -h * (sp === 'madai' ? 0.8 : 0.72), L2 * 0.25, -h * 0.42);
+  }
+  ctx.closePath(); ctx.fill();
+  // 尻びれ
+  ctx.beginPath(); ctx.moveTo(-L2 * 0.5, h * 0.32); ctx.quadraticCurveTo(-L2 * 0.25, h * 0.62, 0, h * 0.4); ctx.closePath(); ctx.fill();
+  // 胴体
+  ctx.beginPath();
+  ctx.moveTo(L2, h * 0.04);
+  ctx.bezierCurveTo(L2 * 0.9, -h * 0.55, -L2 * 0.35, -h * 0.62, tx, -h * 0.11);
+  ctx.lineTo(tx, h * 0.11);
+  ctx.bezierCurveTo(-L2 * 0.35, h * 0.58, L2 * 0.85, h * 0.5, L2, h * 0.04);
+  ctx.closePath();
+  if (sil) ctx.fillStyle = '#1d2a36';
+  else {
+    const gr = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    gr.addColorStop(0, s.back); gr.addColorStop(0.45, s.body); gr.addColorStop(0.8, s.belly); gr.addColorStop(1, s.belly);
+    ctx.fillStyle = gr;
+  }
+  ctx.fill();
+  if (!sil) {
+    ctx.save(); ctx.clip();
+    if (sp === 'madai') {
+      ctx.fillStyle = 'rgba(90,210,255,.85)';
+      for (let i = 0; i < 16; i++) { ctx.beginPath(); ctx.arc(lerp(-L2 * 0.5, L2 * 0.5, prand(i)), -h * 0.1 - prand(i + 50) * h * 0.3, Math.max(1, len * 0.009), 0, 7); ctx.fill(); }
+    } else if (sp === 'buri') {
+      ctx.fillStyle = 'rgba(232,210,80,.85)'; ctx.fillRect(-L2, -h * 0.07, len, h * 0.1);
+    } else if (sp === 'aji') {
+      ctx.strokeStyle = 'rgba(40,50,55,.5)'; ctx.lineWidth = Math.max(1, len * 0.006);
+      ctx.beginPath(); ctx.moveTo(L2 * 0.5, -h * 0.18); ctx.quadraticCurveTo(0, -h * 0.2, -L2 * 0.2, 0); ctx.lineTo(tx, 0); ctx.stroke();
+      for (let x = -L2 * 0.2; x > tx; x -= len * 0.025) { ctx.beginPath(); ctx.moveTo(x, -h * 0.05); ctx.lineTo(x, h * 0.05); ctx.stroke(); }
+    } else if (sp === 'kasago') {
+      for (let i = 0; i < 12; i++) { ctx.fillStyle = i % 3 ? 'rgba(70,20,10,.45)' : 'rgba(255,240,220,.6)'; ctx.beginPath(); ctx.arc(lerp(-L2 * 0.6, L2 * 0.4, prand(i + 3)), lerp(-h * 0.35, h * 0.15, prand(i + 30)), len * (i % 3 ? 0.04 : 0.012), 0, 7); ctx.fill(); }
+    } else if (sp === 'mebaru') {
+      ctx.fillStyle = 'rgba(20,15,10,.25)';
+      for (let i = 0; i < 5; i++) ctx.fillRect(lerp(-L2 * 0.6, L2 * 0.3, i / 4), -h / 2, len * 0.04, h * 0.7);
+    } else if (sp === 'kawahagi') {
+      ctx.fillStyle = 'rgba(60,50,30,.35)';
+      for (let i = 0; i < 14; i++) { ctx.beginPath(); ctx.arc(lerp(-L2 * 0.6, L2 * 0.4, prand(i + 7)), lerp(-h * 0.35, h * 0.2, prand(i + 70)), len * 0.018, 0, 7); ctx.fill(); }
+    }
+    ctx.restore();
+    // エラ
+    ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = Math.max(1, len * 0.008);
+    ctx.beginPath(); ctx.arc(L2 * 0.72, 0, h * 0.34, Math.PI * 0.62, Math.PI * 1.38); ctx.stroke();
+    // 胸びれ
+    ctx.fillStyle = s.fin + 'aa'; ctx.beginPath(); ctx.ellipse(L2 * 0.3, h * 0.1, len * 0.07, h * 0.08, 0.4, 0, 7); ctx.fill();
+  }
+  if (sp === 'kawahagi') { ctx.strokeStyle = C(s.back); ctx.lineWidth = Math.max(1.2, len * 0.012); ctx.beginPath(); ctx.moveTo(L2 * 0.35, -h * 0.4); ctx.lineTo(L2 * 0.28, -h * 0.72); ctx.stroke(); }
+  // 目
+  const er = h * (sp === 'mebaru' ? 0.16 : sp === 'kawahagi' ? 0.08 : 0.11);
+  const ex = L2 * (sp === 'kawahagi' ? 0.6 : 0.74), ey = -h * (sp === 'kawahagi' ? 0.2 : 0.1);
+  ctx.fillStyle = sil ? '#2c3b48' : '#f3efe0'; ctx.beginPath(); ctx.arc(ex, ey, er, 0, 7); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(ex + er * 0.15, ey, er * 0.62, 0, 7); ctx.fill();
+  if (!sil) { ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(ex + er * 0.35, ey - er * 0.3, er * 0.2, 0, 7); ctx.fill(); }
+}
+
+// ====== ループ ======
+E = env();
+computeRod();
+for (let i = 0; i < 14; i++) fishes.push(spawnFish());
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ホーム画面に追加したとき、電波がなくても遊べるようにする
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
